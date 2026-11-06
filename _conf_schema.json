@@ -1,0 +1,102 @@
+{
+  "loudong_no": {
+    "description": "楼栋号",
+    "type": "string",
+    "default": "",
+    "hint": "第几号楼，只填数字（例如 2 表示第 2 栋）。建议在插件控制台里点「查询」后从下拉列表选择，手填可能填到平台查不到的房间。"
+  },
+  "room_no": {
+    "description": "房间号",
+    "type": "string",
+    "default": "",
+    "hint": "宿舍房号，只填数字（例如 2301）。同样建议在控制台的「房间设置」里从下拉列表选择，不要手输。"
+  },
+  "notify_enable": {
+    "description": "启用定时推送",
+    "type": "bool",
+    "default": true
+  },
+  "notify_times": {
+    "description": "每日推送时间",
+    "type": "string",
+    "default": "08:00,20:00",
+    "hint": "24 小时制，多个时间用英文逗号分隔，例如 08:00,20:00。"
+  },
+  "notify_targets": {
+    "description": "推送目标",
+    "type": "string",
+    "default": "",
+    "hint": "通知只发到选中的目标；未选中则不主动发送通知。留空则该机器人的群列表会自动列出；选定后保存即可，通知只发到选中的目标。"
+  },
+  "recharge_watch": {
+    "description": "启用充值监控",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后每隔一段时间拉取一次充值记录，发现新到账就立刻提醒。"
+  },
+  "recharge_interval": {
+    "description": "充值监控间隔（秒）",
+    "type": "int",
+    "default": 120,
+    "hint": "建议不低于 60 秒，避免请求过于频繁。"
+  },
+  "low_threshold": {
+    "description": "低电量提醒阈值（度）",
+    "type": "float",
+    "default": 30,
+    "hint": "剩余电量低于该值时，消息里会追加一行充值建议。"
+  },
+  "default_start": {
+    "type": "string",
+    "default": "",
+    "description": "默认开始时间",
+    "hint": "控制台与日报里「已用电量 / 已购电量 / 累计」都从这个时间算起。留空表示从有数据开始算全部。格式 YYYY-MM-DD HH:MM:SS，也可以只填日期；结束时间不填则自动取到最新。"
+  },
+  "elec_price": {
+    "description": "固定电价（元/度）",
+    "type": "float",
+    "default": 0.55,
+    "hint": "学校电费单价。控制台「已用电量 / 已购电量 / 已用比例」按这个单价把充值金额换算成度数（区间购电 = 区间充值 ÷ 电价）。"
+  },
+  "show_left": {
+    "description": "消息中显示剩余电量",
+    "type": "bool",
+    "default": true
+  },
+  "show_delta": {
+    "description": "消息中显示昨天用电量",
+    "type": "bool",
+    "default": true
+  },
+  "show_total": {
+    "description": "消息中显示累计已用 / 已购",
+    "type": "bool",
+    "default": true
+  },
+  "show_forecast": {
+    "description": "消息中显示预计可用天数",
+    "type": "bool",
+    "default": true
+  },
+  "show_recharge": {
+    "description": "消息中显示本月充值合计",
+    "type": "bool",
+    "default": true
+  },
+  "show_warn": {
+    "description": "消息中显示低电量警告",
+    "type": "bool",
+    "default": true
+  },
+  "napcat_url": {
+    "description": "NapCat HTTP 地址（可选）",
+    "type": "string",
+    "default": "",
+    "hint": "留空则按同容器网络自动探测。用于直接调用 OneBot 接口发送消息与群文件。"
+  },
+  "napcat_token": {
+    "description": "NapCat 访问令牌（可选）",
+    "type": "string",
+    "default": ""
+  }
+}

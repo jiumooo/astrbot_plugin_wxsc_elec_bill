@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>无锡科技职业技术学院电费查询</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#fff; --fg:#1f2328; --muted:#6b7280; --line:#e3e8ef;
+    --brand:#1f6feb; --brand2:#3b82f6; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --head:#1f6feb; --row:#fbfcfe;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0d1117; --card:#161b22; --fg:#e6edf3; --muted:#8b949e; --line:#30363d;
+          --row:#12171e; --head:#1f6feb;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px;}
+  h1{font-size:19px;margin:0 0 2px;font-weight:650;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:12.5px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .card h2{font-size:14.5px;margin:0 0 12px;font-weight:640;display:flex;
+    align-items:center;gap:8px;flex-wrap:wrap}
+  .card h2 .tag{font-size:11px;font-weight:500;color:var(--muted);
+    border:1px solid var(--line);border-radius:99px;padding:1px 8px}
+  .grid{display:grid;gap:12px}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(148px,1fr))}
+  .stat{background:var(--row);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .stat .k{color:var(--muted);font-size:12px}
+  .stat .v{font-size:22px;font-weight:650;margin-top:2px;letter-spacing:.3px}
+  .stat .v small{font-size:12px;font-weight:500;color:var(--muted);margin-left:3px}
+  .stat .s{color:var(--muted);font-size:11px;margin-top:3px;line-height:1.4}
+  .v.ok{color:var(--ok)} .v.warn{color:var(--warn)} .v.bad{color:var(--bad)}
+  label.f{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+  input[type=text],input[type=number],input[type=datetime-local],input[type=time],select{
+    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+    background:var(--card);color:var(--fg);font:inherit;font-size:13px}
+  input:focus,select:focus{outline:2px solid rgba(31,111,235,.25);border-color:var(--brand)}
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .row>div{flex:1 1 170px;min-width:140px}
+  .row.qrow{gap:6px}
+  .row.qrow>div{flex:0 1 auto;min-width:0}
+.dtbox{position:relative;display:inline-flex;align-items:center;gap:0}
+.dtbox .dt-in{width:196px;padding-right:24px;font-variant-numeric:tabular-nums;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a93a6' stroke-width='2' stroke-linecap='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M8 3v4M16 3v4M3 10h18'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;background-size:14px 14px}
+.dtbox .dt-in.bad{border-color:#e5484d !important;box-shadow:0 0 0 1px #e5484d inset}
+.dtbox .dt-native{position:absolute;right:0;top:0;width:24px;height:100%;
+  opacity:0;cursor:pointer;border:0;padding:0;margin:0;background:transparent}
+  .row.qrow>div.fix{flex:0 0 auto;min-width:0}
+  button{cursor:pointer;font:inherit;font-size:13px;padding:8px 15px;border-radius:8px;
+    border:1px solid var(--line);background:var(--card);color:var(--fg);transition:.15s}
+  button:hover{border-color:var(--brand);color:var(--brand)}
+  button.pri{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:550}
+  button.pri:hover{background:#1a5fd0;color:#fff}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  #btn-startdlg{padding:8px 11px;margin-right:-2px}
+  .tabs{display:flex;gap:6px;margin:14px 0 12px;flex-wrap:wrap;align-items:center}
+  .tabs .sp{flex:1 1 auto}
+  .tabs button{padding:6px 14px;font-size:13px;margin-left:0}
+  .card h2 .act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .tab{padding:6px 14px;border-radius:8px;border:1px solid var(--line);cursor:pointer;
+    font-size:13px;color:var(--muted);background:var(--card)}
+  .tab.on{background:rgba(31,111,235,.1);border-color:var(--brand);color:var(--brand);font-weight:550}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{color:var(--muted);font-weight:550;font-size:12px;background:var(--row);position:sticky;top:0}
+  tbody tr:hover{background:rgba(31,111,235,.045)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .scroll{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  .pill{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;
+    background:rgba(31,111,235,.12);color:var(--brand);font-weight:550}
+  .note-in{width:96px;padding:3px 7px;font-size:12.5px;border:1px solid transparent;
+    border-radius:6px;background:transparent;color:var(--fg)}
+  .note-in:hover,.note-in:focus{border-color:var(--line);background:var(--card)}
+.note-td{white-space:nowrap}
+.eye{margin-left:4px;padding:0;border:0;background:transparent;cursor:pointer;
+  opacity:.5;vertical-align:middle;display:inline-flex;align-items:center;
+  justify-content:center;width:22px;height:22px;border-radius:5px;color:inherit}
+.eye:hover{opacity:1;background:rgba(127,127,127,.14)}
+.eye svg{display:block;pointer-events:none}
+.note-td.masked .note-in{color:#8a93a6}
+  .empty{text-align:center;color:var(--muted);padding:26px 0;font-size:13px}
+  #toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;
+    background:#111;color:#fff;padding:9px 18px;border-radius:9px;font-size:13px;
+    pointer-events:none;transition:.25s;z-index:99;max-width:80vw}
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;padding:5px 0}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  /* 推送目标：群聊/私聊分行、换行对齐 */
+  .tg-row{display:flex;gap:10px;align-items:flex-start;margin-top:7px}
+  .tg-lb{flex:0 0 76px;color:var(--muted);font-size:12.5px;line-height:2;white-space:nowrap}
+  .tg-items{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:0 16px;min-width:0}
+  .tg-items .chk{padding:0;line-height:2}
+#m-buyers{gap:2px 24px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:3px}
+#m-buyers .chk{flex:0 0 auto;white-space:nowrap}
+#m-names{gap:2px 24px}
+#m-buyers .chk,#m-names .chk{gap:6px}
+  #m-targets{display:block;min-width:0}
+  /* 弹窗 */
+  #m-root{position:fixed;inset:0;z-index:300;display:none}
+  #m-root.on{display:block}
+  .m-mask{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+  .m-box{position:relative;max-width:880px;margin:5vh auto;background:var(--card);color:var(--fg);
+    border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.32);max-height:88vh;
+    display:flex;flex-direction:column;overflow:hidden}
+  .m-head{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;
+    border-bottom:1px solid var(--line);font-weight:600}
+  .m-body{padding:16px 18px;overflow:auto}
+  .m-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;
+    border-top:1px solid var(--line);flex-wrap:wrap}
+  #m-x{border:0;background:transparent;font-size:20px;line-height:1;cursor:pointer;color:var(--muted)}
+  #m-root pre{background:var(--row);border:1px solid var(--line);border-radius:9px;
+    padding:10px 12px;font-size:13px;line-height:1.6;white-space:pre-wrap;
+    word-break:break-word;margin:6px 0 0}
+  .m-msg{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin:10px 0}
+  .m-msg.on{border-color:var(--brand);box-shadow:0 0 0 1px rgba(31,111,235,.25)}
+  .m-msg-h{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+  .m-msg-h .note-in{width:120px}
+  #m-root table{width:100%;border-collapse:collapse;font-size:12.5px}
+  #m-root th,#m-root td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+  #m-root th{background:var(--head);color:#fff;font-weight:600}
+  .mrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  #btn-refresh.dirty{background:#f59e0b;border-color:#f59e0b;color:#fff;font-weight:600}
+  #btn-refresh.dirty:after{content:" ●";font-size:10px;vertical-align:super}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>无锡科技职业技术学院 · 电费查询</h1>
+  <div class="sub" id="verline">正在连接 AstrBot …</div>
+
+  <div class="card">
+    <h2>当前房间 <span class="tag" id="roomtag">—</span></h2>
+    <div class="grid g4">
+      <div class="stat"><div class="k">剩余电量</div><div class="v" id="s-left">—<small>度</small></div><div class="s" id="s-left-s"></div></div>
+      <div class="stat"><div class="k">预计使用时间</div><div class="v" id="s-eta">—<small>天</small></div><div class="s" id="s-eta-s"></div></div>
+      <div class="stat"><div class="k">全部已用电量</div><div class="v" id="s-all">—<small>度</small></div><div class="s" id="s-all-s">从有数据开始到现在</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>房间设置 <span class="tag" id="room-edit-tag"></span></h2>
+    <div class="row qrow">
+      <div class="fix"><button class="pri" id="btn-load-rooms" title="从平台拉取可选的楼栋与房间">查询</button></div>
+      <div><label class="f">楼栋</label><select id="f-loudong"><option value="">请先点「查询」</option></select></div>
+      <div><label class="f">房间</label><select id="f-room"><option value="">请先选楼栋</option></select></div>
+      <div class="fix"><button id="btn-save-room">保存房间</button></div>
+    </div>
+    <div class="hint" id="room-hint">点「查询」会自动列出可查询的楼栋与宿舍号，只能从列表里选，避免填到查不到的房间。</div>
+  </div>
+
+  <div class="card">
+    <h2>通知设置</h2>
+    <div class="row">
+      <div><label class="f">每日推送时间（逗号分隔，24 小时制）</label><input type="text" id="f-times" placeholder="08:00,20:00"></div>
+      <div><label class="f">低电量提醒阈值（度）</label><input type="number" id="f-threshold" placeholder="30" min="0"></div>
+      <div><label class="f">充值监控间隔（秒）</label><input type="number" id="f-interval" placeholder="120" min="30"></div>
+    </div>
+    <div style="margin-top:12px">
+      <label class="f">推送目标（可多选）</label>
+      <div class="mrow">
+        <button id="btn-detect">检测可用会话</button>
+        <span class="hint" id="detect-tip">点一下重新探测群聊与私聊</span>
+      </div>
+      <div id="targets"></div>
+      <input type="hidden" id="f-targets">
+      <div class="hint">通知只发到选中的目标；未选中则不主动发送通知。</div>
+      <div class="hint">留空则该机器人的群列表会自动列出；选定后保存即可，通知只发到选中的目标。</div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="fix" style="flex:0 0 auto"><label class="chk"><input type="checkbox" id="f-notify"> 启用定时推送</label></div>
+      <div class="fix" style="flex:0 0 auto"><label class="chk"><input type="checkbox" id="f-watch"> 启用充值监控</label></div>
+      <div class="fix" style="flex:0 0 auto"><button class="pri" id="btn-save-notify">保存通知设置</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>充值记录查询 <span class="tag" id="q-label">全部</span>
+      <span class="act">
+        <button id="btn-push-report">推送日报</button>
+        <button id="btn-push-recharge">推送充值提醒</button>
+      </span>
+    </h2>
+    <div class="row qrow">
+      <div class="fix"><button id="btn-startdlg" title="设置每次打开控制台时的默认开始时间">默认开始时间</button></div>
+      <div><label class="f">开始时间</label><span id="q-start-box"></span></div>
+      <div><label class="f">结束时间（留空=最新）</label><span id="q-end-box"></span></div>
+      <div class="fix"><button class="pri" id="btn-query">查询</button></div>
+      <div class="fix" style="margin-left:6px;display:flex;gap:4px">
+        <button id="btn-week">本周</button>
+        <button id="btn-30">近30天</button>
+        <button id="btn-term">开学至今</button>
+        <button id="btn-refresh">刷新数据</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab on" data-tab="summary">每人总金额表</div>
+      <div class="tab" data-tab="detail">充值明细表（总表）</div>
+      <div class="tab" data-tab="person">个人充值记录</div>
+      <span class="sp"></span>
+      <button id="btn-export-xlsx">导出 Excel</button>
+      <button id="btn-export-md">导出 Markdown</button>
+    </div>
+    <div id="pane-summary"></div>
+    <div id="pane-detail" style="display:none"></div>
+    <div id="pane-person" style="display:none">
+      <div class="row" style="margin-bottom:10px">
+        <div style="flex:0 0 240px"><label class="f">选择账号</label><select id="person-sel"></select></div>
+      </div>
+      <div id="person-body"></div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="m-root">
+  <div class="m-mask" id="m-mask"></div>
+  <div class="m-box">
+    <div class="m-head"><span id="m-title"></span><button id="m-x">×</button></div>
+    <div class="m-body" id="m-body"></div>
+    <div class="m-foot" id="m-foot"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function getSDK(){ return window.AstrBotPluginView || window.AstrBotPluginPage; }
+  var S = { etaReady:false, data:null, notes:{}, tab:'summary', person:'',
+            maskList:[], buyerSel:[] };
+  var targetCache=[], targetFriends=[], roomTree=[], defaultStart='';
+  /* 显隐图标：睁眼=内容可见（备注名），闭眼=隐藏（显示原始账号） */
+  var ICON_EYE='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.4 10-6.4S22 12 22 12s-3.6 6.4-10 6.4S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var ICON_EYE_OFF='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.4 10-6.4S22 12 22 12s-3.6 6.4-10 6.4S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="M3.4 3.4 20.6 20.6"/></svg>';
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function money(v){ return (Number(v)||0).toFixed(2); }
+  function toast(msg){
+    var t=$('toast'); t.textContent=msg; t.classList.add('on');
+    clearTimeout(t._h); t._h=setTimeout(function(){ t.classList.remove('on'); },2600);
+  }
+  function apiGet(ep, params){
+    var sdk=getSDK();
+    if(!sdk) return Promise.reject(new Error('插件页面 SDK 未就绪'));
+    return sdk.apiGet(ep, params||{});
+  }
+  function apiPost(ep, body){
+    var sdk=getSDK();
+    if(!sdk) return Promise.reject(new Error('插件页面 SDK 未就绪'));
+    return sdk.apiPost(ep, body||{});
+  }
+  function unwrap(r){
+    if(r && r.status==='error') throw new Error(r.message||'请求失败');
+    return (r && typeof r==='object' && 'data' in r) ? r.data : r;
+  }
+  function pad(n){ return n<10?'0'+n:''+n; }
+  function fmtInput(d){
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+
+           pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  }
+  function fmtText(native){
+    if(!native) return '';
+    return String(native).replace(/-/g,'/').replace('T',' ');
+  }
+  function toApi(v){
+    if(!v) return '';
+    return String(v).trim().replace(/\//g,'-').replace('T',' ');
+  }
+  function isoToInput(v){
+    if(!v) return '';
+    var t=String(v).replace('T',' ').trim();
+    if(t.length===16) t=t+':00';
+    return t.slice(0,19).replace(/-/g,'/');
+  }
+  /* ---- 日期框：年份只能 4 位，范围内校验，日历超范围不可选 ---- */
+  function dtLimits(){
+    var now=new Date(), lo=now.getFullYear()-20;
+    return {min:lo+'-01-01T00:00:00', max:fmtInput(now), loYear:lo, hiYear:now.getFullYear()};
+  }
+  /* 输入即按 YYYYMMDDhhmmss 逐位补分隔符：第 5 位数字自动进入月份，年份永远 4 位 */
+  function dtMask(el){
+    var raw=el.value.replace(/[^0-9]/g,'').slice(0,14), o=raw;
+    if(raw.length>4)  o=raw.slice(0,4)+'/'+raw.slice(4);
+    if(raw.length>6)  o=raw.slice(0,4)+'/'+raw.slice(4,6)+'/'+raw.slice(6);
+    if(raw.length>8)  o=raw.slice(0,4)+'/'+raw.slice(4,6)+'/'+raw.slice(6,8)+' '+raw.slice(8);
+    if(raw.length>10) o=raw.slice(0,4)+'/'+raw.slice(4,6)+'/'+raw.slice(6,8)+' '+raw.slice(8,10)+':'+raw.slice(10);
+    if(raw.length>12) o=raw.slice(0,4)+'/'+raw.slice(4,6)+'/'+raw.slice(6,8)+' '+raw.slice(8,10)+':'+raw.slice(10,12)+':'+raw.slice(12);
+    el.value=o;
+  }
+  function dtParse(v){
+    var t=String(v||'').trim();
+    if(!t) return {ok:true, empty:true, iso:'', native:''};
+    var m=t.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:[ T](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+    if(!m) return {ok:false, msg:'格式应为 yyyy/mm/dd hh:mm:ss'};
+    var Y=+m[1], Mo=+m[2], D=+m[3], H=+(m[4]||0), Mi=+(m[5]||0), S=+(m[6]||0);
+    var L=dtLimits();
+    if(Y<L.loYear || Y>L.hiYear){
+      return {ok:false, msg:'年份只能 4 位数字，且在 '+L.loYear+' ~ '+L.hiYear+' 之间'};
+    }
+    if(Mo<1||Mo>12) return {ok:false, msg:'月份要在 1 ~ 12 之间'};
+    var dim=new Date(Y,Mo,0).getDate();
+    if(D<1||D>dim) return {ok:false, msg:Y+' 年 '+Mo+' 月只有 '+dim+' 天'};
+    if(H>23) return {ok:false, msg:'小时要在 0 ~ 23 之间'};
+    if(Mi>59) return {ok:false, msg:'分钟要在 0 ~ 59 之间'};
+    if(S>59) return {ok:false, msg:'秒要在 0 ~ 59 之间'};
+    var dt=new Date(Y,Mo-1,D,H,Mi,S);
+    if(dt.getTime()>new Date().getTime()+2000) return {ok:false, msg:'不能晚于现在'};
+    return {ok:true, iso:Y+'/'+pad(Mo)+'/'+pad(D)+' '+pad(H)+':'+pad(Mi)+':'+pad(S),
+            native:Y+'-'+pad(Mo)+'-'+pad(D)+'T'+pad(H)+':'+pad(Mi)+':'+pad(S)};
+  }
+  function dtBox(id, val){
+    return '<span class="dtbox">'+
+      '<input type="text" class="dt-in" id="'+id+'" autocomplete="off" spellcheck="false" '+
+      'placeholder="yyyy/mm/dd   h : m : s" value="'+esc(val||'')+'">'+
+      '<input type="datetime-local" class="dt-native" id="'+id+'-n" step="1" title="点这里选日期（超出允许范围的不可选）">'+
+      '</span>';
+  }
+  function dtBind(id, onChange){
+    var t=$(id), n=$(id+'-n');
+    if(!t||!n) return;
+    var L=dtLimits(); n.min=L.min; n.max=L.max;
+    var r0=dtParse(t.value); if(r0.ok && r0.native) n.value=r0.native;
+    t.oninput=function(){ dtMask(t); t.classList.remove('bad'); };
+    t.onblur=function(){
+      if(!t.value){ t.classList.remove('bad'); return; }
+      var r=dtParse(t.value);
+      if(!r.ok){ t.classList.add('bad'); toast(r.msg); return; }
+      t.value=r.iso; t.classList.remove('bad');
+      if(onChange) onChange();
+    };
+    n.onclick=function(){
+      var r=dtParse(t.value);
+      n.value=(r.ok && r.native) ? r.native : '';
+      try{ if(n.showPicker) n.showPicker(); }catch(e){/* 老浏览器：直接手打 */}
+    };
+    n.onchange=function(){
+      if(!n.value) return;
+      var r=dtParse(fmtText(n.value));
+      if(!r.ok){ toast(r.msg); return; }
+      t.value=r.iso; t.classList.remove('bad');
+      if(onChange) onChange();
+    };
+  }
+  function dtGet(id){
+    var t=$(id); if(!t) return '';
+    var r=dtParse(t.value);
+    return (r.ok && !r.empty) ? toApi(r.iso) : '';
+  }
+  function dtSet(id, val){
+    var t=$(id); if(!t) return;
+    if(!val){ t.value=''; return; }
+    t.value=(String(val).indexOf('T')>=0) ? fmtText(val) : String(val).replace(/-/g,'/');
+  }
+
+  /* ---------------- 弹窗 ---------------- */
+  function modal(title, body, foot){
+    $('m-title').textContent=title;
+    $('m-body').innerHTML=body;
+    $('m-foot').innerHTML=foot||'';
+    $('m-root').classList.add('on');
+    var c=$('m-cancel'); if(c) c.onclick=closeModal;
+  }
+  function closeModal(){ _previewSeq++; $('m-root').classList.remove('on'); }
+  $('m-mask').onclick=closeModal;
+  $('m-x').onclick=closeModal;
+
+  function markDirty(on){
+    var b=$('btn-refresh'); if(!b) return;
+    if(on) b.classList.add('dirty'); else b.classList.remove('dirty');
+  }
+
+  /* ---------------- 概览 ---------------- */
+  function loadOverview(){
+    return apiGet('overview').then(unwrap).then(function(d){
+      window.__ovOk=1;
+      var s=d.settings||{};
+      defaultStart = s.default_start || '';
+      $('f-times').value = s.notify_times || '08:00,20:00';
+      $('f-threshold').value = s.low_threshold==null?30:s.low_threshold;
+      $('f-interval').value = s.recharge_interval==null?120:s.recharge_interval;
+      $('f-notify').checked = !(s.notify_enable===false||s.notify_enable==='false'||s.notify_enable===0||s.notify_enable==='0');
+      $('f-watch').checked = !(s.recharge_watch===false||s.recharge_watch==='false'||s.recharge_watch===0||s.recharge_watch==='0');
+      $('f-targets').value = (d.targets||[]).join(',');
+      S.notes = d.notes||{};
+      window.__defaultRange = d.defaultRange || null;
+      $('verline').textContent = '插件版本 ' + (d.version||'-') + (d.roomError? ' · ' + d.roomError : '');
+      $('roomtag').textContent = (d.room && d.room.desc) ? d.room.desc : (d.roomError?'未配置':'—');
+      renderBalance(d.balance, d.balanceError, s);
+      renderTargets(d.targets||[]);
+      syncRoomSelects(s);
+    }).catch(function(e){ $('verline').textContent = '加载失败：'+e.message; toast(e.message); });
+  }
+
+  function refreshMoney(){
+    if(S.moneyBusy) return;
+    S.moneyBusy = true;
+    var done = function(){ S.moneyBusy = false; };
+    apiGet('money').then(unwrap).then(function(d){
+      S.money = d; renderMoney(d); done();
+    }).catch(function(e){
+      renderMoney({ready:false, reason:'error', message:String(e)}); done();
+    });
+  }
+  /* 读数不足两天时，用充值台账反推的长期日均兜底估一个预计使用时间 */
+  function renderMoney(m){
+    if(!m || !m.ready) return;                 /* 推算失败就静默，不覆盖已有结果 */
+    if(S.etaReady) return;                     /* 已经用真实读数算出来了，优先 */
+    var avg = Number(m.avg);
+    if(!(avg > 0)) return;
+    var left = Number(m.left);
+    if(!(left > 0)) return;
+    var dd = left / avg;
+    var until = '';
+    try{
+      var t = new Date(Date.now() + dd*86400000);
+      until = '-' + ('0'+(t.getMonth()+1)).slice(-2) + '-' + ('0'+t.getDate()).slice(-2);
+    }catch(e){}
+    $('s-eta').innerHTML = (dd>=10 ? Math.round(dd) : dd.toFixed(1)) + '<small>天</small>';
+    $('s-eta').className = 'v ' + (dd<3?'bad':(dd<7?'warn':'ok'));
+    $('s-eta-s').textContent = '按充值台账推算日均 ' + avg.toFixed(2) + ' 度（' + m.days + ' 天）'
+      + (until ? (' · 预计 ' + until + ' 用完') : '') + ' · 读数攒够 2 天后更准';
+  }
+  function renderBalance(b, err, s){
+    if(!b){ $('s-left').innerHTML='—'; return; }
+    var all=b.all||{}, rng=b.range||{};
+    $('s-left').innerHTML = money(b.left)+'<small>度</small>';
+    var el=$('s-left');
+    var th = Number((s&&s.low_threshold)||30);
+    el.className='v '+(b.left<10?'bad':(b.left<th?'warn':'ok'));
+    $('s-left-s').textContent = b.left<th ? '低于阈值，建议充值' : '';
+
+    var eta = b.forecast || {};
+    S.etaReady = !!eta.ready;
+    if(eta.ready){
+      var dd = Number(eta.days)||0;
+      if(dd >= 1){
+        $('s-eta').innerHTML = (dd>=10 ? Math.round(dd) : dd.toFixed(1)) + '<small>天</small>';
+      }else{
+        $('s-eta').innerHTML = Math.max(1, Math.round(Number(eta.hours)||1)) + '<small>小时</small>';
+      }
+      $('s-eta').className = 'v ' + (dd<3?'bad':(dd<7?'warn':'ok'));
+      var srcTxt = eta.source==='hist'
+        ? ('近 ' + (eta.span||1) + ' 天日均 ' + Number(eta.avg).toFixed(2) + ' 度')
+        : ('按昨天 ' + Number(eta.avg).toFixed(2) + ' 度');
+      $('s-eta-s').textContent = srcTxt
+        + (eta.until ? (' · 预计 ' + String(eta.until).slice(5) + ' 用完') : '');
+    }else{
+      $('s-eta').innerHTML = '—<small>天</small>';
+      $('s-eta').className = 'v';
+      $('s-eta-s').textContent = eta.reason==='empty'
+        ? '电量已用完，尽快充值'
+        : '读数不足，正在按充值台账估算…';
+    }
+    refreshMoney();
+    $('s-all').innerHTML = money(all.used)+'<small>度</small>';
+    var sa=$('s-all-s');
+    if(sa) sa.textContent = (all.today===null||all.today===undefined)
+      ? '从有数据开始到现在'
+      : ('今日 +'+money(all.today)+' 度 · 累计自表安装起');
+  }
+
+  /* ---------------- 房间：楼栋/房间下拉 ---------------- */
+  function syncRoomSelects(s){
+    if(!roomTree.length) return;
+    var cur=(s&&s.loudong_no)||'';
+    var ln=_num(cur);
+    if(ln && $('f-loudong').value!==ln){
+      var opt=$('f-loudong').querySelector('option[value="'+ln+'"]');
+      if(opt){ $('f-loudong').value=ln; fillRooms(ln, (s&&s.room_no)||''); }
+    }
+  }
+  function _num(s){
+    var t=String(s==null?'':s).trim(), out='';
+    for(var i=0;i<t.length;i++){ if(t[i]>='0'&&t[i]<='9'){ out+=t[i]; } else if(out){ break; } }
+    return out;
+  }
+  function fillRooms(lno, want){
+    var sel=$('f-room'); sel.innerHTML='';
+    var g=null;
+    roomTree.forEach(function(x){ if(String(x.no)===String(lno)) g=x; });
+    if(!g){ sel.innerHTML='<option value="">请先选楼栋</option>'; return; }
+    g.rooms.forEach(function(r){
+      var o=document.createElement('option');
+      o.value=r.room; o.textContent=r.room+' 室';
+      sel.appendChild(o);
+    });
+    if(want){
+      var hit=null;
+      Array.prototype.forEach.call(sel.options,function(o){ if(o.value===String(want)) hit=o; });
+      if(hit) sel.value=String(want);
+      else if(sel.options.length){
+        /* 保存的是完整房间号时，可能带楼栋前缀，做一次后缀匹配 */
+        Array.prototype.forEach.call(sel.options,function(o){
+          if(!hit && String(want).slice(-o.value.length)===o.value) hit=o;
+        });
+        if(hit) sel.value=hit.value;
+      }
+    }
+  }
+  function loadRooms(force){
+    var btn=$('btn-load-rooms'); if(btn) btn.disabled=true;
+    var tip=$('room-hint'); if(tip) tip.textContent='正在从平台拉取楼栋与房间…';
+    return apiGet('rooms', force?{force:1}:{}).then(unwrap).then(function(d){
+      roomTree = d.loudongs||[];
+      var lsel=$('f-loudong'); lsel.innerHTML='';
+      if(!roomTree.length){
+        lsel.innerHTML='<option value="">（未取到楼栋）</option>';
+        $('f-room').innerHTML='<option value="">（未取到房间）</option>';
+        if(tip) tip.textContent='平台没有返回楼栋列表，请稍后重试。';
+        return;
+      }
+      roomTree.forEach(function(g){
+        var o=document.createElement('option');
+        o.value=String(g.no==null?'':g.no);
+        o.textContent=g.loudong+'（'+g.rooms.length+' 间）';
+        lsel.appendChild(o);
+      });
+      var cur=(d.current||{});
+      var cno=_num(cur.loudong_no);
+      if(cno){ lsel.value=cno; }
+      fillRooms(lsel.value, cur.room_no||'');
+      if(tip) tip.textContent='共 '+d.count+' 个房间可选；只能从列表里选。';
+      toast('已加载 '+roomTree.length+' 个楼栋 / '+d.count+' 个房间');
+    }).catch(function(e){
+      if(tip) tip.textContent='拉取失败：'+e.message;
+      toast(e.message);
+    }).then(function(){ if(btn) btn.disabled=false; });
+  }
+  $('f-loudong').onchange=function(){ fillRooms(this.value,''); };
+  $('btn-load-rooms').onclick=function(){ loadRooms(true); };
+  $('btn-save-room').onclick=function(){
+    var lno=$('f-loudong').value, rno=$('f-room').value;
+    if(!lno||!rno){ toast('请先查询并选择楼栋与房间'); return; }
+    apiPost('settings',{settings:{loudong_no:lno, room_no:rno}}).then(unwrap).then(function(){
+      markDirty(true); toast('房间已保存');
+      return loadOverview();
+    }).then(function(){ return query(); }).catch(function(e){ toast(e.message); });
+  };
+
+  /* ---------------- 推送目标 ---------------- */
+  function renderTargets(configured){
+    var host=$('targets'); if(!host) return;
+    var cfg=configured||[];
+    var html='';
+    function block(title,list){
+      if(!list||!list.length) return;
+      html+='<div class="tg-row"><div class="tg-lb">'+esc(title)+'（'+list.length+'）</div>'+
+            '<div class="tg-items">';
+      list.forEach(function(g){
+        var on = cfg.indexOf(g.umo)>=0;
+        html+='<label class="chk"><input type="checkbox" data-umo="'+esc(g.umo)+'"'+
+              (on?' checked':'')+'> '+esc(g.name||g.umo)+'</label>';
+      });
+      html+='</div></div>';
+    }
+    block('群聊', targetCache);
+    block('私聊', targetFriends);
+    if(!html) html='<div class="hint">未检测到可用会话，点「检测可用会话」重新探测。</div>';
+    host.innerHTML=html;
+  }
+  function loadTargets(){
+    return apiGet('targets').then(unwrap).then(function(d){
+      targetCache=d.groups||[];
+      targetFriends=d.friends||[];
+      renderTargets(d.configured||[]);
+    }).catch(function(){});
+  }
+  function detectTargets(){
+    var tip=$('detect-tip'); if(tip) tip.textContent='正在检测…';
+    return loadTargets().then(function(){
+      var n=(targetCache.length||0)+(targetFriends.length||0);
+      if(tip) tip.textContent='已检测到 '+n+' 个可推送会话';
+      toast('检测到 '+n+' 个可推送会话');
+    }).catch(function(e){ if(tip) tip.textContent='检测失败'; toast(e.message); });
+  }
+  function selectedTargets(){
+    var out=[];
+    Array.prototype.forEach.call(document.querySelectorAll('#targets input[type=checkbox]'),function(c){
+      if(c.checked) out.push(c.getAttribute('data-umo'));
+    });
+    return out;
+  }
+  function saveSettings(patch){
+    return apiPost('settings',{settings:patch}).then(unwrap).then(function(r){
+      toast('已保存'); markDirty(true); return r;
+    });
+  }
+
+  /* ---------------- 查询与表格 ---------------- */
+  function query(){
+    var start=toApi($('q-start').value), end=toApi($('q-end').value);
+    $('q-label').textContent='查询中…';
+    return apiGet('data',{start:start,end:end}).then(unwrap).then(function(d){
+      S.data=d; S.notes=d.notes||S.notes;
+      $('q-label').textContent = d.label+' · '+d.count+' 笔 · '+money(d.total)+' 元';
+      renderAll();
+    }).catch(function(e){ $('q-label').textContent='查询失败'; toast(e.message); });
+  }
+  function renderAll(){ renderSummary(); renderDetail(); renderPersonSelect(); renderPerson(); }
+
+  function renderSummary(){
+    var d=S.data; if(!d) return;
+    if(!d.summary || !d.summary.length){
+      $('pane-summary').innerHTML='<div class="empty">该范围内没有充值记录</div>'; return;
+    }
+    var h='<div class="scroll"><table><thead><tr>'+
+      '<th class="num">#</th><th>备注</th><th>账号</th><th class="num">笔数</th>'+
+      '<th class="num">金额(元)</th><th class="num">占比</th><th>首次充值</th><th>最近充值</th><th></th>'+
+      '</tr></thead><tbody>';
+    d.summary.forEach(function(r,i){
+      h+='<tr><td class="num">'+(i+1)+'</td>'+
+         '<td class="note-td"><input class="note-in" data-buyer="'+esc(r.buyer)+'" value="'+esc(r.label||'')+'" placeholder="备注">'+
+         '<button class="eye" title="当前显示备注名，点一下隐藏为原始账号">'+ICON_EYE+'</button></td>'+
+         '<td><code>'+esc(r.buyer)+'</code></td>'+
+         '<td class="num">'+r.count+'</td>'+
+         '<td class="num">'+money(r.amount)+'</td>'+
+         '<td class="num">'+(Number(r.ratio)||0).toFixed(1)+'%</td>'+
+         '<td>'+esc(r.first)+'</td><td>'+esc(r.last)+'</td>'+
+         '<td><button data-person="'+esc(r.buyer)+'">明细</button></td></tr>';
+    });
+    h+='</tbody></table></div>';
+    $('pane-summary').innerHTML=h;
+    bindNotes();
+    Array.prototype.forEach.call($('pane-summary').querySelectorAll('button[data-person]'),function(b){
+      b.onclick=function(){ S.person=b.getAttribute('data-person'); switchTab('person'); };
+    });
+  }
+
+  function renderDetail(){
+    var d=S.data; if(!d) return;
+    if(!d.items || !d.items.length){
+      $('pane-detail').innerHTML='<div class="empty">该范围内没有充值记录</div>'; return;
+    }
+    var h='<div class="scroll"><table><thead><tr><th class="num">#</th><th>充值时间</th>'+
+      '<th class="num">金额(元)</th><th>备注</th><th>账号</th><th>记录号</th><th>订单号</th></tr></thead><tbody>';
+    d.items.forEach(function(r,i){
+      h+='<tr><td class="num">'+(i+1)+'</td><td>'+esc(r.time)+'</td>'+
+         '<td class="num">'+money(r.amt)+'</td><td>'+esc(r.label||'')+'</td>'+
+         '<td><code>'+esc(r.buyer)+'</code></td><td>'+esc(r.recNo)+'</td><td>'+esc(r.outNo)+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    $('pane-detail').innerHTML=h;
+  }
+
+  function renderPersonSelect(){
+    var d=S.data, sel=$('person-sel'); if(!d) return;
+    var rows=(d.summary||[]).slice();
+    sel.innerHTML = rows.length? rows.map(function(r){
+      return '<option value="'+esc(r.buyer)+'">'+esc((r.label?r.label+' · ':'')+r.buyer+
+        '（'+r.count+' 笔 / '+money(r.amount)+' 元）')+'</option>';
+    }).join('') : '<option value="">（无数据）</option>';
+    if(S.person && rows.some(function(r){ return String(r.buyer)===String(S.person); })){
+      sel.value = S.person;
+    }else if(rows.length){ S.person = String(rows[0].buyer); sel.value = S.person; }
+    sel.onchange=function(){ S.person=sel.value; renderPerson(); };
+  }
+
+  function renderPerson(){
+    var d=S.data; if(!d) return;
+    var items=(d.items||[]).filter(function(r){ return String(r.buyer)===String(S.person); });
+    var sum=items.reduce(function(a,r){ return a+Number(r.amt||0); },0);
+    if(!items.length){ $('person-body').innerHTML='<div class="empty">该账号在该范围内没有记录</div>'; return; }
+    var label=(S.notes && S.notes[S.person])||'';
+    var h='<div class="hint" style="margin-bottom:8px">账号 <code>'+esc(S.person)+'</code>'+
+      (label?' · 备注 <b>'+esc(label)+'</b>':'')+' · '+items.length+' 笔 · 合计 '+money(sum)+' 元</div>'+
+      '<div class="scroll"><table><thead><tr><th class="num">#</th><th>充值时间（秒）</th>'+
+      '<th class="num">金额(元)</th><th>记录号</th><th>订单号</th></tr></thead><tbody>';
+    items.forEach(function(r,i){
+      h+='<tr><td class="num">'+(i+1)+'</td><td>'+esc(r.time)+'</td>'+
+         '<td class="num">'+money(r.amt)+'</td><td>'+esc(r.recNo)+'</td><td>'+esc(r.outNo)+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    $('person-body').innerHTML=h;
+  }
+
+  function bindNotes(){
+    Array.prototype.forEach.call(document.querySelectorAll('#pane-summary .eye'),function(btn){
+      btn.onclick=function(){
+        var td=btn.closest('td'), inp=td.querySelector('.note-in'); if(!inp) return;
+        var masked=td.classList.toggle('masked');
+        if(masked){
+          inp.dataset.keep=inp.value;
+          inp.value=inp.getAttribute('data-buyer');
+          inp.readOnly=true;
+          btn.innerHTML=ICON_EYE_OFF;
+          btn.title='当前显示原始账号，点一下恢复备注名';
+        }else{
+          inp.value=inp.dataset.keep||'';
+          inp.readOnly=false;
+          btn.innerHTML=ICON_EYE;
+          btn.title='当前显示备注名，点一下隐藏为原始账号';
+        }
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#pane-summary .note-in'),function(inp){
+      inp.onchange=function(){
+        var buyer=inp.getAttribute('data-buyer'), name=inp.value.trim();
+        apiPost('notes',{buyer:buyer,name:name}).then(unwrap).then(function(d){
+          S.notes=d.notes||{};
+          toast(name? ('已备注 '+buyer+' → '+name) : ('已清空 '+buyer+' 的备注'));
+          if(S.data){
+            (S.data.summary||[]).forEach(function(r){ if(String(r.buyer)===String(buyer)) r.label=name||('#'+buyer); });
+            (S.data.items||[]).forEach(function(r){ if(String(r.buyer)===String(buyer)) r.label=name||('#'+buyer); });
+          }
+          renderSummary(); renderPerson();
+        }).catch(function(e){ toast(e.message); });
+      };
+    });
+  }
+
+  function switchTab(t){
+    S.tab=t;
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){
+      el.classList.toggle('on', el.getAttribute('data-tab')===t);
+    });
+    ['summary','detail','person'].forEach(function(k){
+      $('pane-'+k).style.display = (k===t)?'':'none';
+    });
+    if(t==='person'){ renderPersonSelect(); renderPerson(); }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(el){
+    el.onclick=function(){ switchTab(el.getAttribute('data-tab')); };
+  });
+
+  /* ---------------- 时间范围 ---------------- */
+  function weekStart(){
+    var n=new Date(); var w=(n.getDay()+6)%7;
+    n.setDate(n.getDate()-w); n.setHours(0,0,0,0); return n;
+  }
+  function setRange(d1,d2){
+    dtSet('q-start', d1 ? fmtInput(d1) : '');
+    dtSet('q-end', d2 ? fmtInput(d2) : '');
+    return query();
+  }
+  function applyDefaultStart(){
+    if(defaultStart && !$('q-start').value){
+      dtSet('q-start', isoToInput(defaultStart));
+    }
+  }
+
+  function pickDefaultStart(){
+    var cur=isoToInput(defaultStart);
+    modal('设置默认开始时间',
+      '<div class="hint">确认后每次打开控制台都从这个时间开始查；上方「开始时间」照样能临时手改，只影响当前这一次。</div>'+
+      '<div class="row" style="margin-top:12px"><div style="flex:1 1 260px"><label class="f">默认开始时间</label>'+
+      dtBox('m-def', cur)+'</div></div>',
+      '<button id="m-cancel">取消</button><button id="m-clear">清空</button><button class="pri" id="m-ok">确认</button>');
+    dtBind('m-def');
+    $('m-clear').onclick=function(){
+      apiPost('settings',{settings:{default_start:''}}).then(unwrap).then(function(){
+        defaultStart=''; closeModal(); markDirty(true); toast('已清空默认开始时间');
+        return loadOverview();
+      }).catch(function(e){ toast(e.message); });
+    };
+    $('m-ok').onclick=function(){
+      var rd=dtParse($('m-def').value);
+      if(!rd.ok){ toast(rd.msg); return; }
+      var v=rd.empty ? '' : (rd.iso.replace(/\//g,'-'));
+      apiPost('settings',{settings:{default_start:v}}).then(unwrap).then(function(){
+        defaultStart=v;
+        dtSet('q-start', v ? isoToInput(v) : '');
+        closeModal(); markDirty(true); query();
+        toast(v?('默认开始时间已设为 '+v):'已清空默认开始时间');
+        return loadOverview();
+      }).catch(function(e){ toast(e.message); });
+    };
+  }
+
+  /* ---------------- 导出 ---------------- */
+  function openExport(fmt){
+    var start=toApi($('q-start').value), end=toApi($('q-end').value);
+    var table=S.tab||'summary', buyer=(table==='person'?(S.person||''):'');
+    var name=(fmt==='md'?'Markdown':'Excel');
+    var tok=++_previewSeq;
+    modal('导出预览 · '+name,'<div class="hint">正在统计…</div>','');
+    apiPost('preview',{kind:'export',fmt:fmt,table:table,buyer:buyer,start:start,end:end,limit:10})
+      .then(unwrap).then(function(d){
+      if(tok!==_previewSeq) return;
+      if(!d.count){
+        modal('导出预览','<div class="empty">该范围内没有充值记录</div>','<button id="m-cancel">关闭</button>');
+        return;
+      }
+      var h='<div class="hint">'+esc(d.title)+' · '+esc(d.room)+' · 范围 '+esc(d.range)+
+            ' · '+d.count+' 笔 · 合计 '+money(d.total)+' 元</div>';
+      h+='<div class="scroll" style="max-height:46vh;overflow:auto;margin-top:10px"><table><thead><tr>';
+      (d.columns||[]).forEach(function(c){ h+='<th>'+esc(c)+'</th>'; });
+      h+='</tr></thead><tbody>';
+      (d.rows||[]).forEach(function(r){
+        h+='<tr>';
+        r.forEach(function(x,i){ h+='<td'+(i>=2?' class="num"':'')+'>'+esc(String(x))+'</td>'; });
+        h+='</tr>';
+      });
+      h+='</tbody></table></div>';
+      if(d.truncated) h+='<div class="hint">预览前 '+(d.previewLimit||10)+
+        ' 条，导出文件包含全部 '+d.count+' 条</div>';
+      modal('导出预览 · '+name, h,
+        '<button id="m-cancel">取消</button><button class="pri" id="m-ok">确认导出</button>');
+      $('m-ok').onclick=function(){
+        $('m-ok').disabled=true; toast('正在生成…');
+        apiPost('export',{fmt:fmt,table:table,buyer:buyer,start:start,end:end})
+          .then(unwrap).then(function(r){
+          toast('已生成 '+r.name);
+          try{ var sdk=getSDK(); if(sdk&&sdk.download) sdk.download('download',{name:r.name}, r.name); }catch(e){}
+          closeModal();
+        }).catch(function(e){ toast(e.message); var b=$('m-ok'); if(b) b.disabled=false; });
+      };
+    }).catch(function(e){
+      if(tok!==_previewSeq) return;
+      var m=String((e&&e.message)||'');
+      modal('导出预览','<div class="empty">'+esc(m.indexOf('timed out')>=0
+        ? '平台响应超时（已自动重试一次）：稍后再试，或缩小时间范围'
+        : m)+'</div>','<button id="m-cancel">关闭</button>');
+    });
+  }
+
+  /* ---------------- 日报 ---------------- */
+  var REPORT_FLAGS=[['show_left','剩余电量'],['show_delta','昨天用电'],['show_total','累计用电/购电'],
+                    ['show_forecast','可用天数预测'],['show_recharge','本月已充金额'],['show_warn','低电量提醒']];
+
+  function reportOpts(){
+    var o={};
+    REPORT_FLAGS.forEach(function(f){ var el=$('opt-'+f[0]); if(el) o[f[0]]=el.checked; });
+    var t=$('opt-title'); if(t) o.title=t.value.trim();
+    return o;
+  }
+  function refreshReport(){
+    apiPost('preview',{kind:'report',opts:reportOpts()}).then(unwrap).then(function(d){
+      var w=$('m-prev-wrap'); if(!w) return;
+      w.innerHTML='<h3 style="margin:14px 0 6px">消息预览</h3><pre>'+esc(d.text)+'</pre>'+
+        '<div class="hint">只有上面勾选的项目与标题可以改；金额与电量来自实时查询，预览里改不了。</div>';
+    }).catch(function(e){
+      var w=$('m-prev-wrap'); if(w) w.innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+    });
+  }
+  function doPushReport(){
+    var b=$('m-ok'); if(b) b.disabled=true;
+    apiPost('notify',{kind:'report',opts:reportOpts(),targets:selectedTargets()})
+      .then(unwrap).then(function(d){
+      closeModal(); markDirty(true);
+      toast('已推送日报到 '+((d.targets||[]).length)+' 个会话');
+    }).catch(function(e){ toast(e.message); var x=$('m-ok'); if(x) x.disabled=false; });
+  }
+  function openReport(){
+    var h='<div class="row"><div style="flex:1 1 320px"><label class="f">标题（留空=自动生成）</label>'+
+          '<input id="opt-title" placeholder="留空则按时间自动生成"></div></div>';
+    h+='<label class="f" style="margin-top:10px">显示内容</label><div class="grid g4">';
+    REPORT_FLAGS.forEach(function(f){
+      h+='<label class="chk"><input type="checkbox" id="opt-'+f[0]+'" checked> '+f[1]+'</label>';
+    });
+    h+='</div><div class="hint">推送目标取「通知设置」里勾选的会话；未勾选时用已保存的目标。</div>';
+    h+='<div id="m-prev-wrap"><div class="hint">正在生成预览…</div></div>';
+    modal('推送日报 · 预览', h,
+      '<button id="m-cancel">取消</button><button class="pri" id="m-ok">确认推送</button>');
+    REPORT_FLAGS.forEach(function(f){ $('opt-'+f[0]).onchange=refreshReport; });
+    $('opt-title').onchange=refreshReport;
+    $('m-ok').onclick=doPushReport;
+    refreshReport();
+  }
+
+  /* ---------------- 充值提醒：逐条勾选 + 合并推送 ---------------- */
+  var lastRecharge = null, _previewSeq = 0;
+
+  function pickedRecNos(){
+    var all=document.querySelectorAll('#m-msgs input[type=checkbox]');
+    if(!all.length) return [];
+    var on=[];
+    Array.prototype.forEach.call(all,function(c){ if(c.checked) on.push(c.getAttribute('data-rec')); });
+    return (on.length===all.length) ? [] : on;   /* 全选=交给服务端按范围全推 */
+  }
+  function pickedBuyers(){ return S.buyerSel.slice(); }
+  function pickBatch(d){
+    if(!d || !S.pushLatest) return null;
+    var arr=d.dayBatches||[];
+    if(S.pushDay){
+      for(var i=0;i<arr.length;i++) if(arr[i].day===S.pushDay) return arr[i];
+      return null;
+    }
+    return arr[0]||null;
+  }
+  function updateMergePreview(){
+    var w=$('m-merge-wrap'); if(!w) return;
+    var merge=$('m-merge') && $('m-merge').checked;
+    var list=$('m-msgs-list');
+    if(list) list.style.display = merge ? 'none' : '';
+    if(!merge){
+      w.innerHTML='<div class="hint">未开启合并：每条提醒单独发送。</div>';
+      return;
+    }
+    var d=lastRecharge||{};
+    /* 勾了「最近充值 / 上次充值」时，合并预览跟的就是那一批，而不是上面的逐条勾选 */
+    var bb = pickBatch(d);
+    var body = S.pushLatest ? ((bb&&bb.merged)||'') : (d.merged||'');
+    var n = S.pushLatest ? ((bb&&bb.count)||0) : (d.count||0);
+    var scope = S.pushLatest
+      ? ('「'+(S.pushDay? '上次充值':'最近充值')+'」那一批'+(bb&&bb.day? ('（'+bb.day+'）'):''))
+      : '选中的记录';
+    var tip = n
+      ? ('已开启合并：'+scope+'共 '+n+' 条会合成一条消息（下面只显示合并后的正文，逐条预览已隐藏），头部只写一次，每笔只留金额/时间/订单号')
+      : '已开启合并：选中记录会合成一条消息发送';
+    w.innerHTML='<div class="hint">'+tip+'</div>'+
+      (body? ('<pre style="max-height:220px;overflow:auto">'+esc(body)+'</pre>') : '');
+  }
+  function markMsgCard(cb){
+    var card=cb.closest ? cb.closest('.m-msg') : null;
+    if(card) card.classList.toggle('on', cb.checked);
+    updateMergePreview();
+  }
+
+  function renderMsgList(msgs, opts){
+    var box=$('m-msgs'); if(!box) return;
+    opts=opts||{};
+    var d=lastRecharge||{};
+    var more = opts.head ? '' : (d.truncated
+      ? ('（按时间倒序预览前 '+(d.previewLimit||10)+' 条，另有 '+d.truncated+' 条未展开）')
+      : '');
+    var head = opts.head || ('共 '+d.count+' 条 · 合计 '+money(d.total)+' 元 · 范围 '+esc(d.range));
+    var h='<div class="mrow" style="justify-content:space-between">'+
+          '<span class="hint">'+head+more+'</span>'+
+          '<span><button id="m-all">全选</button> <button id="m-none">全不选</button></span></div>';
+    h+='<div id="m-msgs-list">';
+    var keep=currentChecks();
+    (msgs||[]).forEach(function(m){
+      var on=keep[m.recNo]===false ? '' : ' checked';
+      h+='<div class="m-msg'+(on?' on':'')+'"><div class="m-msg-h">'+
+         '<label class="chk"><input type="checkbox"'+on+' data-rec="'+esc(m.recNo)+'"> 选中</label>'+
+         '<b>'+esc(m.label)+'</b> · '+money(m.amt)+' 元 · '+esc(m.time)+
+         ' <input class="note-in" data-buyer="'+esc(m.buyer)+'" value="'+esc((S.notes&&S.notes[m.buyer])||'')+
+         '" placeholder="备注名"></div><pre>'+esc(m.text)+'</pre></div>';
+    });
+    h+='</div>';
+    box.innerHTML=h;
+    Array.prototype.forEach.call(box.querySelectorAll('#m-msgs-list input[type=checkbox]'),function(cb){
+      cb.onchange=function(){ S.pushLatest=false; S.pushDay=''; S.pushIdx=-1; markMsgCard(cb); };
+    });
+    $('m-all').onclick=function(){
+      S.pushLatest=false; S.pushDay=''; S.pushIdx=-1;
+      Array.prototype.forEach.call(box.querySelectorAll('#m-msgs-list input[type=checkbox]'),
+        function(cb){ cb.checked=true; markMsgCard(cb); });
+    };
+    $('m-none').onclick=function(){
+      S.pushLatest=false; S.pushDay=''; S.pushIdx=-1;
+      Array.prototype.forEach.call(box.querySelectorAll('#m-msgs-list input[type=checkbox]'),
+        function(cb){ cb.checked=false; markMsgCard(cb); });
+    };
+    Array.prototype.forEach.call(box.querySelectorAll('.note-in'),function(inp){
+      inp.onchange=function(){
+        apiPost('notes',{buyer:inp.getAttribute('data-buyer'),name:inp.value.trim()})
+          .then(unwrap).then(function(){ toast('备注已保存'); refreshRecharge(); })
+          .catch(function(e){ toast(e.message); });
+      };
+    });
+    updateMergePreview();
+  }
+
+  function setBatchLine(lb, name){
+    var el=$('m-batch'); if(!el) return;
+    var nm=name||'最近充值';
+    if(!lb||!lb.count){ el.textContent=nm+'：无'; return; }
+    var day=String(lb.day||lb.time||'').slice(0,10);
+    el.textContent=nm+' '+day+' · '+lb.count+' 笔 · '+money(lb.total)+' 元';
+  }
+
+  /* 当前列表里每条的勾选状态（按 recNo），重绘时用来还原 */
+  function currentChecks(){
+    var out={};
+    Array.prototype.forEach.call(document.querySelectorAll('#m-msgs-list input[type=checkbox]'),
+      function(cb){ out[cb.getAttribute('data-rec')]=cb.checked; });
+    return out;
+  }
+
+  /* 「按账号筛选」：勾谁只推谁的记录；全不勾=全部 */
+  /* 「备注显示」：勾上=正文显示备注，取消=只显示数字账号 */
+  function renderPeople(people){
+    people=people||[];
+    var bp=$('m-buyers'), np=$('m-names');
+    var empty='<div class="hint">该范围内没有充值记录</div>';
+    if(bp){
+      if(!people.length){ bp.innerHTML=empty; }
+      else{
+        var h='';
+        people.forEach(function(p){
+          var on=S.buyerSel.indexOf(p.buyer)>=0;
+          h+='<label class="chk"><input type="checkbox" data-buyer="'+esc(p.buyer)+'"'+
+             (on?' checked':'')+'> '+esc(p.who||p.label||p.buyer)+
+             ' <span class="pill">'+(p.count||0)+' 笔</span></label>';
+        });
+        bp.innerHTML=h;
+        Array.prototype.forEach.call(bp.querySelectorAll('input'),function(c){
+          c.onchange=function(){
+            var b=c.getAttribute('data-buyer'), i=S.buyerSel.indexOf(b);
+            if(c.checked){ if(i<0) S.buyerSel.push(b); }
+            else if(i>=0){ S.buyerSel.splice(i,1); }
+            refreshRecharge(false);          /* 筛选变了：重算预览 */
+          };
+        });
+      }
+    }
+    if(np){
+      if(!people.length){ np.innerHTML=empty; }
+      else{
+        var g='';
+        people.forEach(function(p){
+          var on=S.maskList.indexOf(p.buyer)<0;
+          g+='<label class="chk"><input type="checkbox" data-nb="'+esc(p.buyer)+'"'+
+             (on?' checked':'')+'> '+esc(p.label||p.buyer)+'</label>';
+        });
+        np.innerHTML=g;
+        Array.prototype.forEach.call(np.querySelectorAll('input'),function(c){
+          c.onchange=function(){
+            var b=c.getAttribute('data-nb'), i=S.maskList.indexOf(b);
+            if(c.checked){ if(i>=0) S.maskList.splice(i,1); }
+            else if(i<0){ S.maskList.push(b); }
+            refreshRecharge(true);           /* 备注变了：保留批次，重绘正文 */
+          };
+        });
+      }
+    }
+  }
+
+  /* 弹窗里的「推送目标」：默认跟随主面板已勾选的，主面板没勾就全选 */
+  var _mtTried=false;
+  function renderModalTargets(){
+    var box=$('m-targets'); if(!box) return;
+    var cfg=selectedTargets(), h='';
+    function block(title,list){
+      if(!list||!list.length) return;
+      var items='';
+      list.forEach(function(g){
+        var on = cfg.length ? (cfg.indexOf(g.umo)>=0) : true;
+        items+='<label class="chk"><input type="checkbox" data-umo="'+esc(g.umo)+'"'+
+           (on?' checked':'')+'> '+esc(g.name||g.umo)+'</label>';
+      });
+      h+='<div class="tg-row"><span class="tg-lb">'+esc(title)+'（'+list.length+'）</span>'+
+         '<span class="tg-items">'+items+'</span></div>';
+    }
+    block('群聊', targetCache);
+    block('私聊', targetFriends);
+    if(!h){
+      if(!_mtTried){
+        _mtTried=true;
+        box.innerHTML='<div class="hint">正在探测可用会话…</div>';
+        loadTargets().then(function(){ renderModalTargets(); },
+                           function(){ renderModalTargets(); });
+        return;
+      }
+      box.innerHTML='<div class="hint">未检测到可用会话；回主界面点「检测可用会话」后再试</div>';
+      return;
+    }
+    box.innerHTML=h;
+  }
+  function mTargets(){
+    var out=[];
+    Array.prototype.forEach.call(document.querySelectorAll('#m-targets input[type=checkbox]'),
+      function(c){ if(c.checked) out.push(c.getAttribute('data-umo')); });
+    return out;
+  }
+
+  function refreshRecharge(keep){
+    var rs=dtParse($('m-start').value), re=dtParse($('m-end').value);
+    if(!rs.ok){ $('m-start').classList.add('bad'); toast(rs.msg); return; }
+    if(!re.ok){ $('m-end').classList.add('bad'); toast(re.msg); return; }
+    var tok=++_previewSeq;
+    var start=toApi(rs.iso), end=toApi(re.iso);
+    var box=$('m-msgs'); if(!box) return;
+    if(keep!==true){ S.pushLatest=false; S.pushDay=''; S.pushIdx=-1;
+      box.innerHTML='<div class="hint">正在生成预览…</div>'; }
+    apiPost('preview',{kind:'recharge',start:start,end:end,
+                       buyers:pickedBuyers(),mask:S.maskList,limit:10})
+      .then(unwrap).then(function(d){
+      if(tok!==_previewSeq) return;            /* 预览已关闭或已重开：丢弃这次结果 */
+      lastRecharge=d;
+      renderPeople(d.people);
+      updateMergePreview();
+      if(!d.count){
+        box.innerHTML='<div class="empty">该范围内没有可推送的充值记录</div>';
+        setBatchLine(null);
+        return;
+      }
+      setBatchLine(d.latest, '最近充值');
+      renderMsgList(d.messages||[], {});
+    }).catch(function(e){
+      if(tok!==_previewSeq) return;
+      var m=String((e&&e.message)||'');
+      box.innerHTML='<div class="empty">'+esc(m.indexOf('timed out')>=0
+        ? '平台响应超时（已自动重试一次）：稍后再点「刷新数据」，或把时间范围缩小一点'
+        : m)+'</div>';
+    });
+  }
+
+  function pickBatchAt(off){
+    var d=lastRecharge;
+    var arr=(d&&d.dayBatches)||[];
+    var b=arr[off];
+    if(!b||!b.count){
+      toast(off? '没有更早的充值记录了' : '还没有可用的充值记录');
+      return;
+    }
+    var name = off===0? '最近充值' : (off===1? '上次充值' : '充值');
+    /* 直接渲染那一整天所有人的记录，不受上面按账号勾选的影响 */
+    renderMsgList(b.msgs||[], {head:name+' '+b.day+' · '+b.count+' 笔 · '+money(b.total)+' 元'});
+    S.pushLatest=true;
+    S.pushDay=b.day;
+    S.pushIdx=off;
+    setBatchLine(b, name);
+    updateMergePreview();
+    toast('已切到 '+b.day+' 当天全部 '+b.count+' 笔'+(b.persons>1? ('（'+b.persons+' 人）'):'')
+          +'；勾上「合并成一条消息发送」就只发一条');
+  }
+  function pickLatestBatch(){ pickBatchAt(0); }
+  function pickPrevBatch(){
+    var arr=(lastRecharge&&lastRecharge.dayBatches)||[];
+    if(!arr.length){ toast('还没有可用的充值记录'); return; }
+    var cur=(typeof S.pushIdx==='number'&&S.pushIdx>=0)? S.pushIdx : 0;
+    var next=cur+1;
+    if(next>=arr.length){ toast('没有更早的充值记录了'); return; }
+    pickBatchAt(next);
+  }
+
+  function doPushRecharge(){
+    var tg=mTargets();
+    if(!tg.length){ toast('请先勾选至少一个推送目标'); return; }
+    var recs=pickedRecNos();
+    var merge=$('m-merge') && $('m-merge').checked;
+    if(!S.pushLatest && !recs.length
+       && document.querySelectorAll('#m-msgs-list input[type=checkbox]').length
+       && !document.querySelector('#m-msgs-list input[type=checkbox]:checked')){
+      toast('请先勾选要推送的记录'); return;
+    }
+    var b=$('m-ok'); if(b) b.disabled=true;
+    apiPost('notify',{kind:'recharge',
+      start:toApi($('m-start').value), end:toApi($('m-end').value),
+      buyers:pickedBuyers(), recNos:recs, merge:!!merge, mask:S.maskList,
+      mode: S.pushLatest? 'latest' : '',
+      day: S.pushLatest? (S.pushDay||'') : '',
+      targets:tg}).then(unwrap).then(function(d){
+      closeModal(); markDirty(true);
+      toast((d.mode==='latest'? ('已推送最近一次 '+d.count+' 笔'+(d.merged?'（合并为一条）':''))
+            : (d.merged?('已合并推送 '+d.count+' 笔'):('已推送 '+d.count+' 条提醒')))+
+            ' 到 '+((d.targets||[]).length)+' 个会话'+
+            (d.skipped?('，另有 '+d.skipped+' 条超出单次上限未推'):''));
+    }).catch(function(e){ toast(e.message); var x=$('m-ok'); if(x) x.disabled=false; });
+  }
+
+  function openRecharge(){
+    _mtTried=false;
+    var h='<div class="row qrow">'+
+      '<div><label class="f">开始时间（留空=最早）</label>'+
+        dtBox('m-start', isoToInput($('q-start').value))+'</div>'+
+      '<div><label class="f">结束时间（留空=最新）</label>'+
+        dtBox('m-end', isoToInput($('q-end').value))+'</div>'+
+      '</div>';
+    h+='<label class="f" style="margin-top:10px">按账号筛选（全不勾=全部）</label>';
+    h+='<div class="tg-items" id="m-buyers"><div class="hint">正在载入…</div></div>';
+    h+='<label class="f" style="margin-top:10px">备注显示（取消勾选的人，推送消息里只显示数字账号）</label>';
+    h+='<div class="tg-items" id="m-names"><div class="hint">正在载入…</div></div>';
+    h+='<label class="f" style="margin-top:10px">推送目标（勾哪些就发到哪些）</label>';
+    h+='<div class="tg-items" id="m-targets"><div class="hint">正在载入…</div></div>';
+    h+='<div class="mrow" style="margin-top:12px">'+
+       '<button id="m-batch">最近充值：—</button>'+
+       '<button id="m-pick-latest">最近充值</button>'+
+       '<button id="m-pick-prev">上次充值</button>'+
+       '<label class="chk"><input type="checkbox" id="m-merge"> 合并成一条消息发送</label>'+
+       '</div>';
+    h+='<div class="hint">勾选「合并成一条消息发送」后，选中的多条提醒会拼成一条发出，避免刷屏。</div>';
+    h+='<div id="m-merge-wrap"></div>';
+    h+='<div class="hint">金额与时间来自服务端实时数据，不可修改；备注可以直接在这里改。</div>';
+    h+='<div id="m-msgs"><div class="hint">正在生成预览…</div></div>';
+    modal('推送充值提醒 · 预览', h,
+      '<button id="m-cancel">取消</button><button class="pri" id="m-ok">确认推送</button>');
+    dtBind('m-start', refreshRecharge);
+    dtBind('m-end', refreshRecharge);
+    renderModalTargets();
+    $('m-pick-latest').onclick=pickLatestBatch;
+    $('m-pick-prev').onclick=pickPrevBatch;
+    $('m-merge').onchange=updateMergePreview;
+    $('m-ok').onclick=doPushRecharge;
+    updateMergePreview();
+    refreshRecharge();
+  }
+
+  /* ---------------- 绑定 ---------------- */
+  function bindStatic(){
+    $('q-start-box').innerHTML=dtBox('q-start','');
+    $('q-end-box').innerHTML=dtBox('q-end','');
+    dtBind('q-start', function(){ return query(); });
+    dtBind('q-end', function(){ return query(); });
+    $('btn-save-notify').onclick=function(){
+      saveSettings({notify_times:$('f-times').value.trim()||'08:00,20:00',
+        low_threshold:Number($('f-threshold').value||30),
+        recharge_interval:Number($('f-interval').value||120),
+        notify_enable:$('f-notify').checked,
+        recharge_watch:$('f-watch').checked,
+        notify_targets:selectedTargets().join(',')})
+        .then(loadOverview).catch(function(e){ toast(e.message); });
+    };
+    $('btn-detect').onclick=detectTargets;
+    $('btn-query').onclick=function(){ return query(); };
+    $('btn-week').onclick=function(){ return setRange(weekStart(), new Date()); };
+    $('btn-30').onclick=function(){ var d=new Date(); d.setDate(d.getDate()-30); return setRange(d, new Date()); };
+    $('btn-term').onclick=function(){
+      dtSet('q-start', defaultStart ? isoToInput(defaultStart) : '');
+      dtSet('q-end', '');
+      return query();
+    };
+    $('btn-startdlg').onclick=pickDefaultStart;
+    $('btn-export-xlsx').onclick=function(){ openExport('excel'); };
+    $('btn-export-md').onclick=function(){ openExport('md'); };
+    $('btn-push-report').onclick=openReport;
+    $('btn-push-recharge').onclick=openRecharge;
+    $('btn-refresh').onclick=function(){
+      markDirty(false);
+      /* 同步插件配置页里可能刚改过的设置 */
+      return loadOverview().then(function(){ return query(); })
+        .then(function(){ toast('数据已更新'); });
+    };
+  }
+
+  var _tries=0, _started=false;
+  function init(){
+    if(!getSDK()){
+      _tries++;
+      if(_tries>40){
+        $('verline').textContent='未检测到 AstrBot 页面 SDK，请从 AstrBot 面板的插件页面打开本视图';
+        return;
+      }
+      setTimeout(init,250); return;
+    }
+    if(_started) return;
+    _started=true;
+    bindStatic();
+    var _v=$('verline'); if(_v) _v.textContent='正在读取插件数据…';
+    loadOverview()
+      .then(function(){ return loadTargets(); })
+      .then(function(){ applyDefaultStart(); })
+      .then(function(){ return query(); })
+      .catch(function(){});
+    setTimeout(function(){
+      if(window.__ovOk) return;
+      var el=$('verline');
+      if(el) el.textContent='与 AstrBot 面板通信超时：请关闭本页重新从「插件」里打开；若持续如此，说明面板未响应页面请求';
+    }, 9000);
+  }
+  init();
+})();
+</script>
+</body>
+</html>
