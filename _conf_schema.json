@@ -37,8 +37,8 @@
   "recharge_interval": {
     "description": "充值监控间隔（秒）",
     "type": "int",
-    "default": 120,
-    "hint": "建议不低于 60 秒，避免请求过于频繁。"
+    "default": 300,
+    "hint": "默认 300 秒（5 分钟），建议不低于 60 秒，避免请求过于频繁。"
   },
   "low_threshold": {
     "description": "低电量提醒阈值（度）",

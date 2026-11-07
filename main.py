@@ -28,7 +28,7 @@ from astrbot.core.utils.astrbot_path import (
 )
 
 PLUGIN_NAME = "astrbot_plugin_wxsc_elec_bill"
-PLUGIN_VERSION = "3.1.0"
+PLUGIN_VERSION = "3.1.1"
 DISPLAY_NAME = "无锡科技职业技术学院电费查询"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -786,8 +786,16 @@ class ElecBillPlugin(Star):
         if self._flag(opts, "show_delta"):
             lines.append("📈 昨天用电：%s" % ("%.2f度" % yday if yday is not None else "--"))
         if self._flag(opts, "show_forecast"):
-            if yday and yday > 0.05 and float(info["left"]) > 0:
-                lines.append("📅 预计使用时间：%.0f 天" % (float(info["left"]) / yday))
+            fc = self._forecast(h, info)
+            if fc.get("ready"):
+                dd = float(fc["days"])
+                if dd >= 10:
+                    txt = "%d 天" % int(round(dd))
+                elif dd >= 1:
+                    txt = "%.1f 天" % dd
+                else:
+                    txt = "%.0f 小时" % float(fc["hours"])
+                lines.append("📅 预计使用时间：" + txt)
             else:
                 lines.append("📅 预计使用时间：--")
         if self._flag(opts, "show_total"):
@@ -1066,7 +1074,7 @@ class ElecBillPlugin(Star):
                     logger.error("[电费] %s 定时推送失败: %s", hm, e)
 
         if _as_bool(self._c("recharge_watch", True)) and self._targets():
-            gap = int(self._c("recharge_interval", 120))
+            gap = int(self._c("recharge_interval", 300))
             if time.time() - self._last_watch >= gap:
                 self._last_watch = time.time()
                 try:

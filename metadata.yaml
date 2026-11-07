@@ -1,7 +1,7 @@
 name: astrbot_plugin_wxsc_elec_bill
 display_name: 无锡科技职业技术学院宿舍电费查询
 desc: 查询校园宿舍电表余额与用电量、拉取充值台账（精确到秒）、按账号备注、按人汇总与导出 Excel/Markdown，并支持定时推送与充值到账提醒；内置 Web 控制台可选楼栋房间、按时间范围查询与手动推送。个人自用工具，与校方及缴费平台无隶属关系。
-version: 3.1.0
+version: 3.1.1
 author: jiumo
 repo: https://github.com/jiumooo/astrbot_plugin_wxsc_elec_bill
 astrbot_version: ">=4.0.0"
