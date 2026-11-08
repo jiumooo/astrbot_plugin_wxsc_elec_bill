@@ -126,6 +126,49 @@
   .mrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
   #btn-refresh.dirty{background:#f59e0b;border-color:#f59e0b;color:#fff;font-weight:600}
   #btn-refresh.dirty:after{content:" ●";font-size:10px;vertical-align:super}
+  /* 折叠卡片：标题可点，默认收起 */
+  .card.fold>.fold-body{display:none}
+  .card.fold.open>.fold-body{display:block}
+  h2.foldable{cursor:pointer;user-select:none}
+  h2.foldable .caret{display:inline-block;width:12px;font-size:11px;color:var(--muted);
+    transition:transform .18s}
+  .card.open>h2.foldable .caret{transform:rotate(90deg)}
+  /* 运行日志 */
+  .chip{border:1px solid var(--line);background:var(--card);color:var(--fg);
+    padding:4px 11px;border-radius:999px;font-size:12.5px;cursor:pointer}
+  .chip.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+  .fold-line{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+    padding:7px 4px;color:var(--muted);font-size:13px}
+  .fold-line:hover{color:var(--fg)}
+  .fold-line .caret2{display:inline-block;width:11px;font-size:11px;
+    transition:transform .18s}
+  .fold-line.open .caret2{transform:rotate(90deg)}
+  #log-list{max-height:340px;overflow:auto;border:1px solid var(--line);
+    border-radius:9px;background:var(--row)}
+  .log-row{display:flex;gap:8px;padding:4px 9px;font-size:12.5px;line-height:1.55;
+    border-bottom:1px solid var(--line);align-items:flex-start}
+  .log-row:last-child{border-bottom:0}
+  .log-row .lt{color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums}
+  .log-row .ll{flex:0 0 42px;font-weight:600;font-size:10.5px;text-align:center;
+    border-radius:4px;padding:1px 0;margin-top:1px}
+  .log-row .lm{flex:1 1 auto;word-break:break-word;white-space:pre-wrap;
+    font-family:ui-monospace,Consolas,monospace}
+  .log-row .ls{flex:0 0 auto;color:var(--muted);font-size:11px}
+  .lv-info .ll{color:#1f6feb;background:rgba(31,111,235,.12)}
+  .lv-warn .ll{color:#b45309;background:rgba(245,158,11,.18)}
+  .lv-erro .ll{color:#dc2626;background:rgba(220,38,38,.14)}
+  #notice-list{max-height:300px;overflow:auto}
+  .nt-row{border:1px solid var(--line);border-radius:9px;margin:6px 0;overflow:hidden}
+  .nt-h{display:flex;gap:10px;align-items:center;padding:6px 10px;cursor:pointer;
+    font-size:12.5px;flex-wrap:wrap}
+  .nt-h:hover{background:var(--row)}
+  .nt-h .pill{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line)}
+  .nt-h .pill.ok{color:#15803d;border-color:rgba(21,128,61,.45)}
+  .nt-h .pill.bad{color:#dc2626;border-color:rgba(220,38,38,.45)}
+  .nt-b{border-top:1px solid var(--line);padding:8px 10px;white-space:pre-wrap;
+    font-size:12px;line-height:1.6;word-break:break-word;display:none;background:var(--row)}
+  .nt-row.open .nt-b{display:block}
+  .empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
@@ -142,23 +185,26 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>房间设置 <span class="tag" id="room-edit-tag"></span></h2>
+  <div class="card fold" id="card-room">
+    <h2 class="foldable"><span class="caret">›</span> 房间设置 <span class="tag" id="room-edit-tag"></span></h2>
+    <div class="fold-body">
     <div class="row qrow">
       <div class="fix"><button class="pri" id="btn-load-rooms" title="从平台拉取可选的楼栋与房间">查询</button></div>
       <div><label class="f">楼栋</label><select id="f-loudong"><option value="">请先点「查询」</option></select></div>
       <div><label class="f">房间</label><select id="f-room"><option value="">请先选楼栋</option></select></div>
       <div class="fix"><button id="btn-save-room">保存房间</button></div>
     </div>
-    <div class="hint" id="room-hint">点「查询」会自动列出可查询的楼栋与宿舍号，只能从列表里选，避免填到查不到的房间。</div>
+      <div class="hint" id="room-hint">点「查询」会自动列出可查询的楼栋与宿舍号，只能从列表里选，避免填到查不到的房间。</div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>通知设置</h2>
+  <div class="card fold" id="card-notify">
+    <h2 class="foldable"><span class="caret">›</span> 通知设置</h2>
+    <div class="fold-body">
     <div class="row">
       <div><label class="f">每日推送时间（逗号分隔，24 小时制）</label><input type="text" id="f-times" placeholder="08:00,20:00"></div>
       <div><label class="f">低电量提醒阈值（度）</label><input type="number" id="f-threshold" placeholder="30" min="0"></div>
-      <div><label class="f">充值监控间隔（秒）</label><input type="number" id="f-interval" placeholder="120" min="30"></div>
+      <div><label class="f">充值监控间隔（秒）</label><input type="number" id="f-interval" placeholder="300" min="30"></div>
     </div>
     <div style="margin-top:12px">
       <label class="f">推送目标（可多选）</label>
@@ -175,6 +221,7 @@
       <div class="fix" style="flex:0 0 auto"><label class="chk"><input type="checkbox" id="f-notify"> 启用定时推送</label></div>
       <div class="fix" style="flex:0 0 auto"><label class="chk"><input type="checkbox" id="f-watch"> 启用充值监控</label></div>
       <div class="fix" style="flex:0 0 auto"><button class="pri" id="btn-save-notify">保存通知设置</button></div>
+    </div>
     </div>
   </div>
 
@@ -214,6 +261,28 @@
       <div id="person-body"></div>
     </div>
   </div>
+
+  <div class="card fold" id="card-log">
+    <h2 class="foldable"><span class="caret">›</span> 运行日志 <span class="tag" id="log-total">—</span>
+      <span class="act"><button id="btn-log-reload">刷新</button></span>
+    </h2>
+    <div class="fold-body">
+      <div class="row" style="gap:8px;align-items:center;margin-bottom:8px">
+        <div class="fix" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="chip on" data-lv="all">全部</button>
+          <button class="chip" data-lv="info">正常</button>
+          <button class="chip" data-lv="warn">警告</button>
+          <button class="chip" data-lv="erro">错误</button>
+        </div>
+        <span class="sp" style="flex:1 1 auto"></span>
+        <span class="hint" id="log-tip"></span>
+      </div>
+      <div id="log-list"><div class="empty">点击「刷新」加载日志</div></div>
+      <div class="fold-line" id="nt-fold"><span class="caret2">›</span> 已发送通知 <span class="tag" id="nt-total">—</span></div>
+      <div id="notice-list" style="display:none"></div>
+      <div class="hint">日志只保留本进程最近若干条，重启后重新开始；已发送通知会落盘保存，重启后仍在。</div>
+    </div>
+  </div>
 </div>
 <div id="toast"></div>
 <div id="m-root">
@@ -229,7 +298,8 @@
 (function(){
   function getSDK(){ return window.AstrBotPluginView || window.AstrBotPluginPage; }
   var S = { etaReady:false, data:null, notes:{}, tab:'summary', person:'',
-            maskList:[], buyerSel:[] };
+            maskList:[], buyerSel:[],
+            logLv:'all', logInfo:false, runlog:null };
   var targetCache=[], targetFriends=[], roomTree=[], defaultStart='';
   /* 显隐图标：睁眼=内容可见（备注名），闭眼=隐藏（显示原始账号） */
   var ICON_EYE='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.4 10-6.4S22 12 22 12s-3.6 6.4-10 6.4S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -1182,6 +1252,127 @@
     refreshRecharge();
   }
 
+  /* ---------------- 折叠卡片与运行日志 ---------------- */
+  function lvlOf(r){
+    var v=String((r&&r.lv)||'').toUpperCase();
+    if(v==='WARNING'||v==='WARN') return 'warn';
+    if(v==='ERROR'||v==='CRITICAL'||v==='CRIT') return 'erro';
+    return 'info';
+  }
+  function lvText(k){ return k==='warn'?'WARN':(k==='erro'?'ERRO':'INFO'); }
+  function tmOnly(t){ var s=String(t||''); return s.length>=19?s.slice(11,19):s; }
+
+  function loadRunlog(silent){
+    return apiGet('/runlog',{}).then(unwrap).then(function(d){
+      S.runlog=d||{};
+      renderRunlog();
+      return d;
+    }).catch(function(e){
+      if(!silent) toast('读取日志失败：'+e.message);
+    });
+  }
+
+  function logRow(r){
+    var k=lvlOf(r);
+    return '<div class="log-row lv-'+k+'">'+
+      '<span class="ll">'+lvText(k)+'</span>'+
+      '<span class="lt">'+esc(tmOnly(r.t))+'</span>'+
+      '<span class="lm">'+esc(r.msg)+'</span>'+
+      (r.line?'<span class="ls">L'+esc(r.line)+'</span>':'')+
+      '</div>';
+  }
+
+  function renderRunlog(){
+    var d=S.runlog||{}, logs=d.logs||[], nt=d.notices||[], c=d.counts||{};
+    var tag=$('log-total');
+    if(tag) tag.textContent=(c.INFO||0)+'/'+(c.WARN||0)+'/'+(c.ERRO||0);
+    var tip=$('log-tip');
+    if(tip) tip.textContent='正常 '+(c.INFO||0)+' · 警告 '+(c.WARN||0)+' · 错误 '+(c.ERRO||0);
+    var box=$('log-list');
+    if(box){
+      var info=[], other=[], i;
+      for(i=0;i<logs.length;i++){ (lvlOf(logs[i])==='info'?info:other).push(logs[i]); }
+      var h='';
+      if(S.logLv==='all'){
+        if(S.logInfo){
+          h+='<div class="fold-line open" id="info-fold"><span class="caret2">›</span> 收起正常日志（'+info.length+'）</div>';
+          for(i=0;i<info.length;i++) h+=logRow(info[i]);
+          for(i=0;i<other.length;i++) h+=logRow(other[i]);
+        }else{
+          for(i=0;i<other.length;i++) h+=logRow(other[i]);
+          h+='<div class="fold-line" id="info-fold"><span class="caret2">›</span> 正常日志 '+info.length+' 条（点击展开）</div>';
+        }
+      }else{
+        var pick=S.logLv==='info'?info:logs.filter(function(r){ return lvlOf(r)===S.logLv; });
+        for(i=0;i<pick.length;i++) h+=logRow(pick[i]);
+      }
+      box.innerHTML=h||'<div class="empty">暂无日志</div>';
+      var f=$('info-fold');
+      if(f) f.onclick=function(){ S.logInfo=!S.logInfo; renderRunlog(); };
+    }
+    var ntag=$('nt-total');
+    if(ntag) ntag.textContent=String(d.noticeTotal==null?nt.length:d.noticeTotal);
+    var nb=$('notice-list');
+    if(nb){
+      var g='';
+      for(var q=0;q<nt.length;q++){
+        var r=nt[q], okk=Number(r.ok||0)>0;
+        g+='<div class="nt-row"><div class="nt-h">'+
+          '<span class="pill '+(okk?'ok':'bad')+'">'+esc(r.kind||'通知')+'</span>'+
+          '<span class="lt">'+esc(r.t||'')+'</span>'+
+          '<span class="hint">成功 '+esc(r.ok||0)+(Number(r.fail||0)?' · 失败 '+esc(r.fail):'')+'</span>'+
+          '</div><div class="nt-b">'+esc(r.text||'')+'</div></div>';
+      }
+      nb.innerHTML=g||'<div class="empty">还没有发送过通知</div>';
+      var heads=nb.getElementsByClassName('nt-h');
+      for(var w=0;w<heads.length;w++){
+        heads[w].onclick=function(){ this.parentNode.classList.toggle('open'); };
+      }
+    }
+  }
+
+  function bindFold(){
+    var cards=document.getElementsByClassName('card');
+    for(var i=0;i<cards.length;i++){
+      (function(c){
+        if(!c.classList.contains('fold')) return;
+        var t=c.getElementsByTagName('h2')[0];
+        if(!t) return;
+        t.onclick=function(ev){
+          var tg=ev&&ev.target;
+          if(tg&&tg.closest&&tg.closest('.act')) return;
+          var on=c.classList.toggle('open');
+          if(on&&c.id==='card-log'&&!S.runlog) loadRunlog(true);
+        };
+      })(cards[i]);
+    }
+  }
+
+  function bindRunlog(){
+    var chips=document.querySelectorAll('.chip[data-lv]');
+    for(var i=0;i<chips.length;i++){
+      (function(b){
+        b.onclick=function(){
+          S.logLv=b.getAttribute('data-lv');
+          for(var j=0;j<chips.length;j++) chips[j].classList.toggle('on',chips[j]===b);
+          if(!S.runlog) return loadRunlog();
+          renderRunlog();
+        };
+      })(chips[i]);
+    }
+    var rl=$('btn-log-reload');
+    if(rl) rl.onclick=function(){
+      loadRunlog().then(function(){ toast('日志已刷新'); });
+    };
+    var nf=$('nt-fold');
+    if(nf) nf.onclick=function(){
+      var on=nf.classList.toggle('open');
+      var box=$('notice-list');
+      if(box) box.style.display=on?'block':'none';
+      if(on&&!S.runlog) loadRunlog();
+    };
+  }
+
   /* ---------------- 绑定 ---------------- */
   function bindStatic(){
     $('q-start-box').innerHTML=dtBox('q-start','');
@@ -1191,7 +1382,7 @@
     $('btn-save-notify').onclick=function(){
       saveSettings({notify_times:$('f-times').value.trim()||'08:00,20:00',
         low_threshold:Number($('f-threshold').value||30),
-        recharge_interval:Number($('f-interval').value||120),
+        recharge_interval:Number($('f-interval').value||300),
         notify_enable:$('f-notify').checked,
         recharge_watch:$('f-watch').checked,
         notify_targets:selectedTargets().join(',')})
@@ -1217,6 +1408,8 @@
       return loadOverview().then(function(){ return query(); })
         .then(function(){ toast('数据已更新'); });
     };
+    bindFold();
+    bindRunlog();
   }
 
   var _tries=0, _started=false;

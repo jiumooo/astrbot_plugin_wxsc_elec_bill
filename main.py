@@ -13,8 +13,10 @@ import io
 import json
 import os
 import sys
+import logging
 import threading
 import time
+from collections import deque
 from datetime import date, datetime, timedelta
 
 from astrbot.api import logger, AstrBotConfig
@@ -28,7 +30,36 @@ from astrbot.core.utils.astrbot_path import (
 )
 
 PLUGIN_NAME = "astrbot_plugin_wxsc_elec_bill"
-PLUGIN_VERSION = "3.1.1"
+
+
+class _RingHandler(logging.Handler):
+    """把本插件自己的日志收进内存环形缓冲，供控制台「运行日志」查看。
+
+    只收名字带插件名、或正文带 [电费] 前缀的记录，避免混入其它插件。
+    """
+
+    def __init__(self, buf):
+        logging.Handler.__init__(self)
+        self.buf = buf
+        self.setFormatter(logging.Formatter("%(message)s"))
+
+    def emit(self, record):
+        try:
+            name = str(getattr(record, "name", "") or "")
+            msg = self.format(record)
+            if PLUGIN_NAME not in name and "[电费]" not in msg:
+                return
+            self.buf.append({
+                "t": time.strftime("%Y-%m-%d %H:%M:%S",
+                                   time.localtime(record.created)),
+                "lv": str(record.levelname or "INFO").upper(),
+                "line": int(getattr(record, "lineno", 0) or 0),
+                "msg": msg,
+            })
+        except Exception:  # noqa: BLE001
+            pass
+
+PLUGIN_VERSION = "3.1.2"
 DISPLAY_NAME = "无锡科技职业技术学院电费查询"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -150,6 +181,11 @@ class ElecBillPlugin(Star):
         self._warm_task = None
         self._notes_cache = None
         self._tree_cache = {"ts": 0.0, "rows": []}
+        self._log_buf = deque(maxlen=600)
+        self._notice_file = os.path.join(self.data_dir, "notices.json")
+        self._notice_buf = deque(maxlen=200)
+        self._notice_load()
+        self._attach_log_ring()
         try:
             self._cfg_path = os.path.join(get_astrbot_config_path(),
                                           PLUGIN_NAME + "_config.json")
@@ -171,6 +207,7 @@ class ElecBillPlugin(Star):
             ("/download", self.api_download, ["GET"]),
             ("/targets", self.api_targets, ["GET"]),
             ("/preview", self.api_preview, ["POST"]),
+            ("/runlog", self.api_runlog, ["GET"]),
         ]
         for route, fn, methods in table:
             try:
@@ -672,7 +709,72 @@ class ElecBillPlugin(Star):
                 out.append(t)
         return out
 
-    async def _send(self, text, targets=None):
+    # ------------------------------------------------------------ 运行日志
+    def _attach_log_ring(self):
+        """挂上日志环形缓冲；重载插件时先摘掉旧 handler，避免越挂越多。"""
+        try:
+            for h in list(getattr(logger, "handlers", []) or []):
+                if getattr(h, "_wxsc_ring", False):
+                    try:
+                        logger.removeHandler(h)
+                    except Exception:  # noqa: BLE001
+                        pass
+            hd = _RingHandler(self._log_buf)
+            hd._wxsc_ring = True
+            logger.addHandler(hd)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[电费] 安装日志缓冲失败: %s", e)
+
+    def _notice_load(self):
+        try:
+            with io.open(self._notice_file, "r", encoding="utf-8") as f:
+                rows = json.load(f)
+            if isinstance(rows, list):
+                for r in rows[-200:]:
+                    if isinstance(r, dict):
+                        self._notice_buf.append(r)
+        except Exception:  # noqa: BLE001
+            pass
+
+    def _notice_add(self, kind, ok, targets, text, fail):
+        """记一条发送结果，并落盘，重启后仍能看到发过什么。"""
+        try:
+            rec = {"t": time.strftime("%Y-%m-%d %H:%M:%S"),
+                   "kind": str(kind or "通知"), "ok": int(ok or 0),
+                   "fail": len(fail or []), "targets": list(targets or []),
+                   "text": str(text or "")[:2000]}
+            self._notice_buf.append(rec)
+            tmp = self._notice_file + ".tmp"
+            with io.open(tmp, "w", encoding="utf-8") as f:
+                json.dump(list(self._notice_buf)[-200:], f, ensure_ascii=False)
+            os.replace(tmp, self._notice_file)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[电费] 保存通知记录失败: %s", e)
+
+    async def api_runlog(self):
+        """控制台「运行日志」：本进程日志 + 已发送通知。"""
+        try:
+            logs = list(self._log_buf)[-400:]
+            logs.reverse()
+            cnt = {"INFO": 0, "WARN": 0, "ERRO": 0}
+            for r in self._log_buf:
+                lv = str(r.get("lv") or "").upper()
+                if lv in ("WARNING", "WARN"):
+                    cnt["WARN"] += 1
+                elif lv in ("ERROR", "CRITICAL", "CRIT"):
+                    cnt["ERRO"] += 1
+                else:
+                    cnt["INFO"] += 1
+            nt = list(self._notice_buf)[-80:]
+            nt.reverse()
+            return self._ok({"logs": logs, "counts": cnt, "notices": nt,
+                             "noticeTotal": len(self._notice_buf),
+                             "version": PLUGIN_VERSION})
+        except Exception as e:  # noqa: BLE001
+            logger.error("[电费] runlog 失败: %s", e)
+            return self._err("读取日志失败：%s" % e)
+
+    async def _send(self, text, targets=None, kind='通知'):
         tg = targets or self._targets()
         if not tg:
             raise RuntimeError("没有配置推送目标，请在 Web 控制台或插件设置里选择会话")
@@ -685,6 +787,7 @@ class ElecBillPlugin(Star):
             except Exception as e:  # noqa: BLE001
                 fail.append("%s: %s" % (t, e))
                 logger.warning("[电费] 推送到 %s 失败: %s", t, e)
+        self._notice_add(kind, ok, tg, text, fail)
         if ok == 0:
             raise RuntimeError("全部推送失败：" + "; ".join(fail)[:300])
         return ok, fail
@@ -1096,7 +1199,7 @@ class ElecBillPlugin(Star):
     async def _send_report(self, targets=None):
         msg, meta = await asyncio.to_thread(self._report_text, {})
         sent_to = list(targets) if targets else self._targets()
-        await self._send(msg, targets=sent_to)
+        await self._send(msg, targets=sent_to, kind="日报")
         logger.info("[电费] 日报已推送 %d 个目标", len(sent_to))
         return msg
 
@@ -1122,7 +1225,7 @@ class ElecBillPlugin(Star):
         for r in fresh:
             if only_buyers and str(r["buyer"]) not in only_buyers:
                 continue
-            await self._send(self.build_recharge_msg(r, info))
+            await self._send(self.build_recharge_msg(r, info), kind="充值提醒")
             sent.append(r)
         st["seen"] = recnos[-500:]
         st["ts"] = _now_ts()
@@ -1587,7 +1690,7 @@ class ElecBillPlugin(Star):
             if kind == "report":
                 msg, _meta = await asyncio.to_thread(self._report_text,
                                                      body.get("opts") or {})
-                ok, fail = await self._send(msg, targets=targets)
+                ok, fail = await self._send(msg, targets=targets, kind="日报")
                 return self._ok({"kind": "report", "sent": ok, "count": ok,
                                  "failed": fail, "targets": targets, "text": msg})
             start = str(body.get("start") or "")
@@ -1621,7 +1724,7 @@ class ElecBillPlugin(Star):
                     # 默认：按人分组的「最近充值记录」模板
                     text = self.build_latest_text(batch, latest.get("day") or "", mask)
                     merged = False
-                ok, fail = await self._send(text, targets=targets)
+                ok, fail = await self._send(text, targets=targets, kind="充值记录")
                 return self._ok({"kind": "recharge", "mode": "latest", "merged": merged,
                                  "mask": sorted(mask),
                                  "count": len(batch), "sent": ok, "failed": fail,
@@ -1630,14 +1733,15 @@ class ElecBillPlugin(Star):
             merge = _as_bool(body.get("merge"), False)
             if merge:
                 text = self.build_merge_text(sel, start, end, mask)
-                ok, fail = await self._send(text, targets=targets)
+                ok, fail = await self._send(text, targets=targets, kind="充值记录")
                 return self._ok({"kind": "recharge", "merged": True, "count": len(sel),
                                  "sent": ok, "failed": fail, "targets": targets,
                                  "text": text})
             ok, fail = 0, []
             for r in sel[:50]:
                 try:
-                    await self._send(self.build_recharge_msg(r, info, mask), targets=targets)
+                    await self._send(self.build_recharge_msg(r, info, mask),
+                                     targets=targets, kind="充值提醒")
                     ok += 1
                 except Exception as e:  # noqa: BLE001
                     fail.append(str(e)[:120])
