@@ -19,6 +19,15 @@ from datetime import date, datetime, timedelta
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
+# ── 平台参数：来自小程序前端，非本插件申请、非平台授权凭据 ──────────────
+# APPID / APPSECRET 与下面这对 RSA 密钥，都打包在该缴费平台**微信小程序前端**
+# 的公开资源里，任何安装者都能在本地提取，属于该平台前端的既有设计。
+# 本插件只是原样复刻它的请求协议：公钥加密业务参数、私钥解密响应，
+# 与小程序原本的行为一致。这组参数**只用于该电费接口的信封加解密**，
+# 与使用者账号、微信登录态、校园统一身份认证无关；插件不读取、不保存任何登录凭据。
+# 平台若轮换或作废这组参数，插件将失效；若平台方提出异议，
+# 按 DISCLAIMER.md 第五节立即停止维护并从各分发渠道下架。
+# 来源与责任的完整说明见 DISCLAIMER.md「二、接口与密钥来源」。
 APPID = "AABBCC01"
 APPSECRET = "5F10C0339BA54972A4B7599754BB919D"
 PUB = (

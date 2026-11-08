@@ -7,13 +7,21 @@
   - 充值账号可备注姓名，导出与通知自动带备注
   - 定时日报 + 充值提醒，可自选推送目标，多笔可合并成一条
   - 内置 Web 控制台：选楼栋/房间、按时间范围查询、备注管理、导出、手动推送
+
+日志：全部输出走 astrbot.api.logger；本文件 import logging 仅用于实现只读的内存环形缓冲。
 """
 import asyncio
 import io
 import json
 import os
 import sys
+
+# `logging` 只用于下面 _RingHandler 继承 logging.Handler、使用 logging.Formatter，
+# 把本插件 logger 已经产生的日志抄一份进内存，供控制台「运行日志」查看。
+# 不调用 logging.basicConfig()，不修改 root logger，不设置任何全局日志级别，
+# 也不注册文件或网络 handler —— 所有日志输出仍然走 astrbot.api.logger。
 import logging
+
 import threading
 import time
 from collections import deque
@@ -36,6 +44,9 @@ class _RingHandler(logging.Handler):
     """把本插件自己的日志收进内存环形缓冲，供控制台「运行日志」查看。
 
     只收名字带插件名、或正文带 [电费] 前缀的记录，避免混入其它插件。
+
+    只读旁路：不改日志级别、不写文件、不发网络请求，也不触碰 AstrBot 的全局日志
+    配置。它只是挂在插件 logger 上的一个采集器，重载插件时会被主动摘掉。
     """
 
     def __init__(self, buf):
