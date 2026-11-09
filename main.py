@@ -70,7 +70,7 @@ class _RingHandler(logging.Handler):
         except Exception:  # noqa: BLE001
             pass
 
-PLUGIN_VERSION = "3.1.3"
+PLUGIN_VERSION = "3.1.4"
 DISPLAY_NAME = "无锡科技职业技术学院电费查询"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -87,6 +87,7 @@ CONF_KEYS = (
     "loudong_no", "room_no",
     "notify_enable", "notify_times", "notify_targets",
     "recharge_watch", "recharge_interval", "low_threshold",
+    "sample_interval",
     "show_left", "show_delta", "show_total", "show_forecast",
     "show_recharge", "show_warn",
     "napcat_url", "napcat_token", "default_start",
@@ -188,6 +189,7 @@ class ElecBillPlugin(Star):
                               "items": None, "info": None}
         self._sent = {}
         self._last_watch = 0.0
+        self._last_sample = 0.0
         self._task = None
         self._warm_task = None
         self._notes_cache = None
@@ -459,6 +461,9 @@ class ElecBillPlugin(Star):
         rec = h.get(d) or {}
         rec.setdefault("first_used", used)
         rec.setdefault("first_buy", buy)
+        _now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        rec.setdefault("first_ts", _now)
+        rec["ts"] = _now
         rec["used"] = used
         self._sample_touch(used)
         rec["buy"] = buy
@@ -473,8 +478,21 @@ class ElecBillPlugin(Star):
         return h
 
     def _day_used(self, h, back=1):
-        """back=1 昨天，back=2 前天……"""
-        key = (date.today() - timedelta(days=back)).strftime("%Y-%m-%d")
+        """单日用量。back=1 昨天，back=2 前天……
+
+        与趋势图走同一条路径：_usage_between 覆盖 00:00 → 次日 00:00 的整段，
+        跨夜的用电按时间比例分摊进来。这样日报里的「昨天用电」和趋势图里
+        对应的那个点永远是同一个数——两处曾经各算各的，日报漏掉夜里没人
+        查询的那几小时，比趋势图小一截。
+        采样覆盖不了那天时（老版本没留采样、或那天插件没运行），
+        再退回「当日首末读数差」这个近似值。
+        """
+        day = date.today() - timedelta(days=back)
+        _s = datetime(day.year, day.month, day.day)
+        _v, _hit = self._usage_between(_s, _s + timedelta(days=1), h)
+        if _hit and _v > 0:
+            return round(_v, 3)
+        key = day.strftime("%Y-%m-%d")
         r = h.get(key) or {}
         if "first_used" in r and "used" in r:
             v = r["used"] - r["first_used"]
@@ -566,35 +584,22 @@ class ElecBillPlugin(Star):
         return out
 
     def _avg_used(self, h):
-        """日均用电（度/天）。
+        """日均用电（度/天），口径与「用电趋势」的日视图完全一致。
 
-        优先用历史读数跨天差值：最后一天的累计读数 − 最早一天的起始读数，除以相隔天数。
-        只有一天样本时退回「昨天」的单日用量。
+        取近 8 天里除今天之外的每天用电量求平均 —— 今天还没过完，算进去会把
+        日均压低。这样面板上的「近 N 天日均」乘开就是趋势图上那几根柱子的
+        平均高度，两处永远对得上；以前一处拿累计读数差、一处拿每日末次减首次，
+        才会出现「面板说 15 度、图上只有 8 度」。
+
         返回 (avg, span_days, source)；算不出返回 (None, 0, "")。
         """
-        first = last = None
-        for k in sorted(h.keys()):
-            r = h.get(k) or {}
-            fu, u = r.get("first_used"), r.get("used")
-            if fu is None:
-                continue
-            if first is None:
-                first = (k, float(fu))
-            if u is not None:
-                last = (k, float(u))
-        if first and last and last[0] > first[0]:
-            try:
-                d0 = date(*[int(x) for x in first[0].split("-")])
-                d1 = date(*[int(x) for x in last[0].split("-")])
-                span = (d1 - d0).days
-                diff = last[1] - first[1]
-                if span > 0 and diff > 0:
-                    return diff / span, span, "hist"
-            except Exception:  # noqa: BLE001
-                pass
+        pts = self._trend_days(h, 8)[:-1]
+        vals = [p["v"] for p in pts if p["v"] is not None and p["v"] > 0.05]
+        if vals:
+            return sum(vals) / len(vals), float(len(vals)), "days"
         y = self._day_used(h, 1)
         if y and y > 0.05:
-            return float(y), 1, "yday"
+            return float(y), 1.0, "yday"
         return None, 0, ""
 
     def _forecast(self, h, info):
@@ -800,6 +805,18 @@ class ElecBillPlugin(Star):
         except Exception as e:  # noqa: BLE001
             logger.warning("[电费] 保存趋势采样失败（忽略，继续运行）: %s", e)
 
+    def _sample_poll(self):
+        """后台定时采样：只读一次当前读数，落到 samples.json 与 hist.json。
+
+        面板没被打开时 _hist_touch 不会被调用，samples.json 就只有一个点，
+        小时图只能显示空白。这里让后台循环按间隔主动采一次，开销仅一次
+        query_room（约 1 秒），不查充值台账、不做统计。
+        """
+        room = self._room()
+        info = ec.query_room(room)
+        self._hist_touch(info)
+        return float(info.get("used") or 0)
+
     def _sample_touch(self, used):
         """记一次累计用电量，供趋势图按小时/按天还原。
 
@@ -809,6 +826,8 @@ class ElecBillPlugin(Star):
         相邻两点相减就是这段区间的实际用电。
         """
         now = datetime.now()
+        if not hasattr(self, "_samples"):
+            self._samples = []
         if self._samples and (now - self._samples[-1][0]).total_seconds() < 240:
             return
         self._samples.append((now, round(float(used), 3)))
@@ -816,13 +835,60 @@ class ElecBillPlugin(Star):
         self._samples = [x for x in self._samples if x[0] >= cut][-30000:]
         self._sample_save()
 
-    def _usage_between(self, start, end):
+    def _series(self, h=None):
+        """把 samples.json 与 hist.json 的读数合并成一条按时间排序的序列。
+
+        hist 每天只留首末两条读数，单靠它「当天末次减首次」会把夜里那几小时
+        漏掉，所以日视图的数字一直比真实值小；samples 是后台定时采样，覆盖
+        连续但只从装上插件那天开始。两者合起来才完整 —— 24 小时视图、12 小时
+        视图、日视图、日均全部走这一条序列，四处数字才互相对得上。
+        """
+        if h is None:
+            h = self._hist()
+        pts = list(getattr(self, "_samples", None) or [])
+        fmt = "%Y-%m-%d %H:%M:%S"
+        for key in sorted(h.keys()):
+            rec = h.get(key) or {}
+            # v3.1.4 之前的记录没有时间戳，按当天 08:00 / 22:00 兜底。
+            # 这两个时刻之间的空档仍会按时间比例摊到相邻两天，不会整段丢掉。
+            ts1 = rec.get("first_ts")
+            ts2 = rec.get("ts")
+            if not ts1 and rec.get("first_used") is not None:
+                ts1 = "%s 08:00:00" % key
+            if not ts2 and rec.get("used") is not None:
+                ts2 = "%s 22:00:00" % key
+            for ts, uu in ((ts1, rec.get("first_used")), (ts2, rec.get("used"))):
+                if not ts or uu is None:
+                    continue
+                try:
+                    pts.append((datetime.strptime(str(ts), fmt), float(uu)))
+                except Exception:  # noqa: BLE001
+                    continue
+        pts.sort(key=lambda x: x[0])
+        out = []
+        for t, u in pts:
+            if out:
+                if abs((t - out[-1][0]).total_seconds()) < 60:
+                    # 同一分钟内两路各记了一次：取较大的读数（累计值只会增），
+                    # 否则 hist 的旧快照会把 samples 的新读数盖回小值。
+                    if u > out[-1][1]:
+                        out[-1] = (t, u)
+                    continue
+                if u < out[-1][1]:
+                    if out[-1][1] - u > 50.0:
+                        out = []           # 倒退超过 50 度：换表或清零，重新起算
+                    else:
+                        continue           # 小幅倒退：历史回填造成的抖动，跳过该点
+            out.append((t, u))
+        return out
+
+    def _usage_between(self, start, end, h=None):
         """把相邻采样的累计用量差按时间比例分摊到 [start, end] 内的重叠部分。
 
         跨区间边界的采样对按重叠时长折算，所以既不漏算也不重复。
         返回 (用电量, 这段时间是否有可用采样)。
         """
-        sm = self._samples
+        sm = self._series(h)
         if len(sm) < 2:
             return 0.0, False
         total = 0.0
@@ -844,58 +910,68 @@ class ElecBillPlugin(Star):
             hit = True
         return total, hit
 
-    def _trend_24h(self):
+    def _trend_24h(self, h=None):
         """过去 24 小时，每小时一个桶。"""
         top = datetime.now().replace(minute=0, second=0, microsecond=0)
         pts = []
         for i in range(23, -1, -1):
             s = top - timedelta(hours=i)
-            v, hit = self._usage_between(s, s + timedelta(hours=1))
+            v, hit = self._usage_between(s, s + timedelta(hours=1), h)
             pts.append({"k": s.strftime("%H:00"), "t": s.strftime("%Y-%m-%d %H:00"),
                         "v": round(v, 3) if hit else None})
         return pts
 
+    def _trend_12h(self, h=None):
+        """过去 12 小时，每半小时一个桶（24 个点）。"""
+        now = datetime.now()
+        top = now.replace(minute=30 if now.minute >= 30 else 0,
+                          second=0, microsecond=0)
+        pts = []
+        for i in range(23, -1, -1):
+            s = top - timedelta(minutes=30 * i)
+            v, hit = self._usage_between(s, s + timedelta(minutes=30), h)
+            pts.append({"k": s.strftime("%H:%M"),
+                        "t": s.strftime("%Y-%m-%d %H:%M"),
+                        "v": round(v, 3) if hit else None})
+        return pts
+
     def _trend_days(self, h, n):
-        """近 n 天，每天一个桶。优先用 hist.json 的当日首末读数差。"""
+        """近 n 天，每天一个桶。
+
+        与 12 小时 / 24 小时视图走同一条 _series() 序列、同样按时间比例分摊：
+        跨夜的用电会落到相邻两天，不会像「当日末次减首次」那样整段漏掉。
+        """
         today = date.today()
         pts = []
         for i in range(n - 1, -1, -1):
             d = today - timedelta(days=i)
-            key = d.isoformat()
-            rec = h.get(key) or {}
-            v = None
-            try:
-                if rec.get("first_used") is not None and rec.get("used") is not None:
-                    dv = float(rec["used"]) - float(rec["first_used"])
-                    if dv >= 0:
-                        v = dv
-            except Exception:  # noqa: BLE001
-                v = None
-            if v is None:
-                s = datetime.combine(d, datetime.min.time())
-                v2, hit = self._usage_between(s, s + timedelta(days=1))
-                v = v2 if hit else None
-            pts.append({"k": d.strftime("%m-%d"), "t": key,
-                        "v": round(v, 3) if v is not None else None})
+            s = datetime.combine(d, datetime.min.time())
+            v, hit = self._usage_between(s, s + timedelta(days=1), h)
+            pts.append({"k": d.strftime("%m-%d"), "t": d.isoformat(),
+                        "v": round(v, 3) if hit else None})
         return pts
 
     def _trend_sync(self, rng):
         h = self._hist()
-        if rng in ("7d", "30d"):
+        if rng == "12h":
+            pts, unit = self._trend_12h(h), "half"
+        elif rng in ("7d", "30d"):
             n = 7 if rng == "7d" else 30
             pts, unit = self._trend_days(h, n), "day"
         else:
-            rng, pts, unit = "24h", self._trend_24h(), "hour"
+            rng, pts, unit = "24h", self._trend_24h(h), "hour"
         vals = [p["v"] for p in pts if p["v"] is not None]
+        sm = self._series(h)
         return {
             "range": rng, "unit": unit, "points": pts,
             "total": round(sum(vals), 3),
-            "avg": round(sum(vals) / len(vals), 3) if vals else 0,
+            "avg": round(sum(vals) / len(pts), 3) if pts else 0,
             "peak": round(max(vals), 3) if vals else 0,
+            "min": round(min(vals), 3) if vals else 0,
             "ready": bool(vals),
             "gaps": len(pts) - len(vals),
-            "sampleFrom": self._samples[0][0].strftime("%Y-%m-%d %H:%M") if self._samples else "",
-            "sampleCount": len(self._samples),
+            "sampleFrom": sm[0][0].strftime("%Y-%m-%d %H:%M") if sm else "",
+            "sampleCount": len(sm),
         }
 
     async def api_trend(self):
@@ -1348,6 +1424,14 @@ class ElecBillPlugin(Star):
                 except Exception as e:  # noqa: BLE001
                     logger.error("[电费] 充值监控异常: %s", e)
 
+        gap_s = int(self._c("sample_interval", 1800))
+        if gap_s > 0 and time.time() - self._last_sample >= gap_s:
+            self._last_sample = time.time()
+            try:
+                await asyncio.to_thread(self._sample_poll)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("[电费] 定时采样失败（不影响推送）: %s", e)
+
     def _load_state(self):
         try:
             with open(self.state_file, encoding="utf-8") as f:
@@ -1491,7 +1575,8 @@ class ElecBillPlugin(Star):
                 "notes": self._notes(),
                 "targets": self._targets(),
                 "version": PLUGIN_VERSION,
-                "defaultRange": self._default_range()}
+                "defaultRange": self._default_range(),
+                "updatedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         try:
             data["room"] = self._room_json()
         except Exception as e:  # noqa: BLE001

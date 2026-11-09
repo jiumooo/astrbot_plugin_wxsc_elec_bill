@@ -172,12 +172,15 @@
   /* ---- 用电趋势 ---- */
   #trend-box{padding:2px 0 0;min-height:190px}
   #trend-box svg{display:block;max-width:100%}
-  #trend-box .tb{fill:#3b82f6;opacity:.82}
-  #trend-box .tb:hover{opacity:1}
+  #trend-box .tl{fill:none;stroke:#3b82f6;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  #trend-box .ta{fill:#3b82f6;opacity:.13}
+  #trend-box .tp{fill:#3b82f6;stroke:#fff;stroke-width:1.5}
+  #trend-box .tp:hover{fill:#1d4ed8}
   #trend-box .tb0{fill:#d8d8d8;opacity:.55}
   #trend-box .gl{stroke:#e8e8e8;stroke-width:1}
   #trend-box .ax{fill:#9aa0a6;font-size:10px}
   #trend-box .vl{fill:#5f6368;font-size:9px}
+  #trend-box .tv{fill:#1d4ed8;font-size:9.5px;font-weight:600;paint-order:stroke;stroke:#fff;stroke-width:2.6px;stroke-linejoin:round}
 </style>
 </head>
 <body>
@@ -188,7 +191,7 @@
   <div class="card">
     <h2>当前房间 <span class="tag" id="roomtag">—</span></h2>
     <div class="grid g4">
-      <div class="stat"><div class="k">剩余电量</div><div class="v" id="s-left">—<small>度</small></div><div class="s" id="s-left-s"></div></div>
+      <div class="stat"><div class="k">剩余电量</div><div class="v" id="s-left">—<small>度</small></div><div class="s" id="s-left-s"></div><div class="s" id="s-upd"></div></div>
       <div class="stat"><div class="k">预计使用时间</div><div class="v" id="s-eta">—<small>天</small></div><div class="s" id="s-eta-s"></div></div>
       <div class="stat"><div class="k">全部已用电量</div><div class="v" id="s-all">—<small>度</small></div><div class="s" id="s-all-s">从有数据开始到现在</div></div>
     </div>
@@ -197,13 +200,14 @@
   <div class="card" id="card-trend">
     <h2>用电趋势 <span class="tag" id="trend-sum">—</span>
       <span class="act">
-        <button class="chip on" data-tr="24h">过去 24 小时</button>
+        <button class="chip" data-tr="12h">近 12 小时</button>
+        <button class="chip on" data-tr="24h">近 24 小时</button>
         <button class="chip" data-tr="7d">近 7 天</button>
         <button class="chip" data-tr="30d">近 30 天</button>
       </span>
     </h2>
     <div id="trend-box"><div class="empty">加载中…</div></div>
-    <div class="hint" id="trend-tip">按小时统计用电量，由插件定时采样累计读数自己推算；刚装上新版时小时数据需要一点时间积累，近 7 天与近 30 天会用已有的每日记录回填。</div>
+    <div class="hint" id="trend-tip">折线由插件定时采样累计读数自己推算；没有采样的时段会在底部标一个灰点，折线直接跨过去不断开。刚装上新版时小时数据需要一点时间积累，近 7 天与近 30 天会用已有的每日记录回填。</div>
   </div>
 
   <div class="card fold" id="card-room">
@@ -321,7 +325,7 @@
   var S = { etaReady:false, data:null, notes:{}, tab:'summary', person:'',
             maskList:[], buyerSel:[],
             logLv:'all', logInfo:false, runlog:null,
-            trend:'24h', trendData:null };
+            trend:'24h', trendData:null, updAt:'' };
   var targetCache=[], targetFriends=[], roomTree=[], defaultStart='';
   /* 显隐图标：睁眼=内容可见（备注名），闭眼=隐藏（显示原始账号） */
   var ICON_EYE='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.4 10-6.4S22 12 22 12s-3.6 6.4-10 6.4S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -469,6 +473,7 @@
   function loadOverview(){
     return apiGet('overview').then(unwrap).then(function(d){
       window.__ovOk=1;
+      S.updAt = d.updatedAt || '';
       var s=d.settings||{};
       defaultStart = s.default_start || '';
       $('f-times').value = s.notify_times || '08:00,20:00';
@@ -524,6 +529,15 @@
     var th = Number((s&&s.low_threshold)||30);
     el.className='v '+(b.left<10?'bad':(b.left<th?'warn':'ok'));
     $('s-left-s').textContent = b.left<th ? '低于阈值，建议充值' : '';
+    var upd=$('s-upd');
+    if(upd){
+      var tm=String(S.updAt||'').match(/(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{1,2}):(\d{1,2})/);
+      upd.textContent = tm
+        ? ('数据更新于'+tm[1]+'年'+Number(tm[2])+'月'+Number(tm[3])+'日 '
+           +('0'+Number(tm[4])).slice(-2)+'时'+('0'+Number(tm[5])).slice(-2)+'分'
+           +('0'+Number(tm[6])).slice(-2)+'秒')
+        : '';
+    }
 
     var eta = b.forecast || {};
     S.etaReady = !!eta.ready;
@@ -535,11 +549,18 @@
         $('s-eta').innerHTML = Math.max(1, Math.round(Number(eta.hours)||1)) + '<small>小时</small>';
       }
       $('s-eta').className = 'v ' + (dd<3?'bad':(dd<7?'warn':'ok'));
-      var srcTxt = eta.source==='hist'
-        ? ('近 ' + (eta.span||1) + ' 天日均 ' + Number(eta.avg).toFixed(2) + ' 度')
+      var spanD = Math.max(1, Math.round(Number(eta.span) || 1));
+      var srcTxt = (eta.source==='days' || eta.source==='hist')
+        ? ('近 ' + spanD + ' 天日均 ' + Number(eta.avg).toFixed(2) + ' 度')
         : ('按昨天 ' + Number(eta.avg).toFixed(2) + ' 度');
-      $('s-eta-s').textContent = srcTxt
-        + (eta.until ? (' · 预计 ' + String(eta.until).slice(5) + ' 用完') : '');
+      var untilTxt = '';
+      if(eta.until){
+        var um = String(eta.until).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+        untilTxt = um
+          ? (' · 预计 ' + Number(um[2]) + '月' + Number(um[3]) + '日用完')
+          : (' · 预计 ' + String(eta.until) + ' 用完');
+      }
+      $('s-eta-s').textContent = srcTxt + untilTxt;
     }else{
       $('s-eta').innerHTML = '—<small>天</small>';
       $('s-eta').className = 'v';
@@ -1405,8 +1426,8 @@
     var sum=$('trend-sum');
     if(sum){
       if(d&&d.ready){
-        var unit=d.unit==='hour'?'度':'度/天';
-        sum.textContent='合计 '+fmtV(d.total)+' '+unit+' · 峰值 '+fmtV(d.peak);
+        sum.textContent='合计 '+fmtV(d.total)+' 度 · 峰值 '+fmtV(d.peak)
+          +' 度 · 谷值 '+fmtV(Number(d.min)||0)+' 度';
       } else {
         sum.textContent='暂无数据';
       }
@@ -1414,38 +1435,81 @@
     if(!pts.length){ box.innerHTML='<div class="empty">暂无数据</div>'; return; }
 
     var W=Math.max(280, box.clientWidth||620), H=190;
-    var padL=36, padR=10, padT=14, padB=24;
+    var padL=36, padR=12, padT=26, padB=24;
     var iw=W-padL-padR, ih=H-padT-padB;
     var vals=[]; for(var i=0;i<pts.length;i++){ if(pts[i].v!=null) vals.push(pts[i].v); }
-    var mx=1, mn=0;
+    var mx=1;
     if(vals.length){
       mx=Math.max.apply(null,vals);
       if(mx<=0) mx=1;
       mx=mx*1.18;
     }
-    var n=pts.length, gw=iw/n, bw=Math.max(2,Math.min(30,gw*0.62));
+    var n=pts.length;
+    var stepX = n>1 ? iw/(n-1) : 0;
+    var baseY = padT+ih;
+    function tx(i){ return padL + (n>1 ? stepX*i : iw/2); }
+    function ty(v){ return padT + ih - ih*(v/mx); }
+
     var s='<svg class="trend" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">';
+    s+='<defs><linearGradient id="tgrad" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0%" stop-color="#3b82f6" stop-opacity="0.30"/>'
+      +'<stop offset="100%" stop-color="#3b82f6" stop-opacity="0.02"/>'
+      +'</linearGradient></defs>';
     for(var g=0;g<=2;g++){
       var gy=padT+ih*(g/2);
       s+='<line class="gl" x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'"/>';
       var lab=mx*(1-g/2);
       s+='<text class="ax" x="'+(padL-6)+'" y="'+(gy+3.5).toFixed(1)+'" text-anchor="end">'+esc(fmtV(lab))+'</text>';
     }
-    var stepLbl = d.unit==='hour' ? 3 : (n>14?5:1);
-    for(var i=0;i<n;i++){
-      var p=pts[i], cx=padL+gw*i+gw/2;
-      if(p.v!=null){
-        var bh=Math.max(1.5, ih*(p.v/mx));
-        var y=padT+ih-bh;
-        s+='<rect class="tb" x="'+(cx-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="2"><title>'+esc(p.k+'  '+fmtV(p.v)+' 度')+'</title></rect>';
-        if(n<=12){
-          s+='<text class="vl" x="'+cx.toFixed(1)+'" y="'+(y-3).toFixed(1)+'" text-anchor="middle">'+esc(fmtV(p.v))+'</text>';
-        }
-      } else {
-        s+='<rect class="tb0" x="'+(cx-bw/2).toFixed(1)+'" y="'+(padT+ih-6)+'" width="'+bw.toFixed(1)+'" height="6" rx="2"><title>'+esc(p.k+'  无采样数据')+'</title></rect>';
+    /* 有值的点按时间顺序连成一条折线；中间的空档直接跨过去，不做停顿——
+       空档位置的读数是缺的，但前后两端都是真实读数，连起来比断成几截更好读。
+       空档本身仍会在底部标成灰点，悬停可看到「无采样数据」。 */
+    var valid=[];
+    for(var i=0;i<n;i++){ if(pts[i].v!=null) valid.push(i); }
+    if(valid.length>1){
+      var path='';
+      for(var j=0;j<valid.length;j++){
+        var pv=pts[valid[j]];
+        path += (j?' L':'M')+tx(valid[j]).toFixed(1)+' '+ty(pv.v).toFixed(1);
       }
-      if(i%stepLbl===0){
-        s+='<text class="ax" x="'+cx.toFixed(1)+'" y="'+(padT+ih+15)+'" text-anchor="middle">'+esc(p.k)+'</text>';
+      var area=path
+        +' L'+tx(valid[valid.length-1]).toFixed(1)+' '+baseY.toFixed(1)
+        +' L'+tx(valid[0]).toFixed(1)+' '+baseY.toFixed(1)+' Z';
+      s+='<path class="ta" d="'+area+'"/>';
+      s+='<path class="tl" d="'+path+'"/>';
+    }
+    for(var j=0;j<valid.length;j++){
+      var p2=pts[valid[j]], cx=tx(valid[j]), cy=ty(p2.v);
+      s+='<circle class="tp" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(valid.length>1?2.6:3.4)+'"><title>'+esc(p2.k+'  '+fmtV(p2.v)+' 度')+'</title></circle>';
+    }
+    /* 每个有值的点上方直接标数值；点太密时按 34px 间隔稀疏，避免文字叠在一起 */
+    var lblStep = Math.max(1, Math.ceil(34 / (stepX || iw)));
+    for(var i=0;i<n;i++){
+      if(pts[i].v==null) continue;
+      if(i % lblStep !== 0) continue;
+      var lv = ty(pts[i].v) - 8;
+      if(lv < padT - 4) lv = padT - 4;
+      s+='<text class="tv" x="'+tx(i).toFixed(1)+'" y="'+lv.toFixed(1)+'" text-anchor="middle">'+esc(fmtV(pts[i].v))+'</text>';
+    }
+    /* 没有采样的时段：底部一个小灰点，不参与连线 */
+    for(var i=0;i<n;i++){
+      if(pts[i].v==null){
+        s+='<circle class="tb0" cx="'+tx(i).toFixed(1)+'" cy="'+(baseY-3).toFixed(1)+'" r="2.2"><title>'+esc(pts[i].k+'  无采样数据')+'</title></circle>';
+      }
+    }
+    /* X 轴只标整点：12 小时每个整点、24 小时每 2 小时一个（共 12 个）；
+       7 天全部标日期，30 天每 5 天标一个 */
+    var stepLbl = d.unit==='half' ? 2 : (d.unit==='hour' ? 2 : (n>14?5:1));
+    var onlyHour = (d.unit==='half' || d.unit==='hour');
+    for(var i=0;i<n;i++){
+      /* 整点范围先按 :00 筛，再按步长抽；12 小时视图的 24 个半小时桶里正好 12 个整点，
+         所以步长取 1，全部标出 */
+      if(onlyHour){
+        if(pts[i].k.slice(-3)!==':00') continue;
+        if(d.unit!=='half' && i%stepLbl!==0) continue;
+      } else if(i%stepLbl!==0) continue;
+      {
+        s+='<text class="ax" x="'+tx(i).toFixed(1)+'" y="'+(baseY+15).toFixed(1)+'" text-anchor="middle">'+esc(pts[i].k)+'</text>';
       }
     }
     s+='</svg>';
@@ -1454,9 +1518,11 @@
     var tip=$('trend-tip');
     if(tip && d){
       var t='';
-      if(d.gaps>0) t+='有 '+d.gaps+' 个时间段没有采样（插件没在运行或刚装上），显示为灰点。';
+      if(d.gaps>0) t+='有 '+d.gaps+' 个时间段还没有采样（那段时间插件没在运行，或刚装上），'
+        +'在底部显示为灰点；插件每 30 分钟采一次，这些灰点会被新采样逐段补上，补满后这句提示自动消失。';
       if(d.unit==='hour') t+='小时用电由累计读数差推算，采满一天后曲线才完整。';
-      if(!t) t='按小时统计用电量，由插件定时采样累计读数自己推算。';
+      if(d.unit==='half') t+='半小时用电由累计读数差推算，采满 12 小时后曲线才完整。';
+      if(!t) t='由插件每 30 分钟采样一次累计读数，再按时间比例推算每个时段的用电量。';
       tip.textContent=t;
     }
   }
