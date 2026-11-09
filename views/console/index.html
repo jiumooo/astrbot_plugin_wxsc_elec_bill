@@ -169,6 +169,15 @@
     font-size:12px;line-height:1.6;word-break:break-word;display:none;background:var(--row)}
   .nt-row.open .nt-b{display:block}
   .empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
+  /* ---- 用电趋势 ---- */
+  #trend-box{padding:2px 0 0;min-height:190px}
+  #trend-box svg{display:block;max-width:100%}
+  #trend-box .tb{fill:#3b82f6;opacity:.82}
+  #trend-box .tb:hover{opacity:1}
+  #trend-box .tb0{fill:#d8d8d8;opacity:.55}
+  #trend-box .gl{stroke:#e8e8e8;stroke-width:1}
+  #trend-box .ax{fill:#9aa0a6;font-size:10px}
+  #trend-box .vl{fill:#5f6368;font-size:9px}
 </style>
 </head>
 <body>
@@ -183,6 +192,18 @@
       <div class="stat"><div class="k">预计使用时间</div><div class="v" id="s-eta">—<small>天</small></div><div class="s" id="s-eta-s"></div></div>
       <div class="stat"><div class="k">全部已用电量</div><div class="v" id="s-all">—<small>度</small></div><div class="s" id="s-all-s">从有数据开始到现在</div></div>
     </div>
+  </div>
+
+  <div class="card" id="card-trend">
+    <h2>用电趋势 <span class="tag" id="trend-sum">—</span>
+      <span class="act">
+        <button class="chip on" data-tr="24h">过去 24 小时</button>
+        <button class="chip" data-tr="7d">近 7 天</button>
+        <button class="chip" data-tr="30d">近 30 天</button>
+      </span>
+    </h2>
+    <div id="trend-box"><div class="empty">加载中…</div></div>
+    <div class="hint" id="trend-tip">按小时统计用电量，由插件定时采样累计读数自己推算；刚装上新版时小时数据需要一点时间积累，近 7 天与近 30 天会用已有的每日记录回填。</div>
   </div>
 
   <div class="card fold" id="card-room">
@@ -299,7 +320,8 @@
   function getSDK(){ return window.AstrBotPluginView || window.AstrBotPluginPage; }
   var S = { etaReady:false, data:null, notes:{}, tab:'summary', person:'',
             maskList:[], buyerSel:[],
-            logLv:'all', logInfo:false, runlog:null };
+            logLv:'all', logInfo:false, runlog:null,
+            trend:'24h', trendData:null };
   var targetCache=[], targetFriends=[], roomTree=[], defaultStart='';
   /* 显隐图标：睁眼=内容可见（备注名），闭眼=隐藏（显示原始账号） */
   var ICON_EYE='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.4 10-6.4S22 12 22 12s-3.6 6.4-10 6.4S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -1374,6 +1396,91 @@
   }
 
   /* ---------------- 绑定 ---------------- */
+  /* ---- 用电趋势 ---- */
+  function fmtV(v){ return v>=100?String(Math.round(v)):(v>=10?v.toFixed(1):v.toFixed(2)); }
+  function renderTrend(d){
+    var box=$('trend-box'); if(!box) return;
+    S.trendData=d;
+    var pts=(d&&d.points)||[];
+    var sum=$('trend-sum');
+    if(sum){
+      if(d&&d.ready){
+        var unit=d.unit==='hour'?'度':'度/天';
+        sum.textContent='合计 '+fmtV(d.total)+' '+unit+' · 峰值 '+fmtV(d.peak);
+      } else {
+        sum.textContent='暂无数据';
+      }
+    }
+    if(!pts.length){ box.innerHTML='<div class="empty">暂无数据</div>'; return; }
+
+    var W=Math.max(280, box.clientWidth||620), H=190;
+    var padL=36, padR=10, padT=14, padB=24;
+    var iw=W-padL-padR, ih=H-padT-padB;
+    var vals=[]; for(var i=0;i<pts.length;i++){ if(pts[i].v!=null) vals.push(pts[i].v); }
+    var mx=1, mn=0;
+    if(vals.length){
+      mx=Math.max.apply(null,vals);
+      if(mx<=0) mx=1;
+      mx=mx*1.18;
+    }
+    var n=pts.length, gw=iw/n, bw=Math.max(2,Math.min(30,gw*0.62));
+    var s='<svg class="trend" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">';
+    for(var g=0;g<=2;g++){
+      var gy=padT+ih*(g/2);
+      s+='<line class="gl" x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'"/>';
+      var lab=mx*(1-g/2);
+      s+='<text class="ax" x="'+(padL-6)+'" y="'+(gy+3.5).toFixed(1)+'" text-anchor="end">'+esc(fmtV(lab))+'</text>';
+    }
+    var stepLbl = d.unit==='hour' ? 3 : (n>14?5:1);
+    for(var i=0;i<n;i++){
+      var p=pts[i], cx=padL+gw*i+gw/2;
+      if(p.v!=null){
+        var bh=Math.max(1.5, ih*(p.v/mx));
+        var y=padT+ih-bh;
+        s+='<rect class="tb" x="'+(cx-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="2"><title>'+esc(p.k+'  '+fmtV(p.v)+' 度')+'</title></rect>';
+        if(n<=12){
+          s+='<text class="vl" x="'+cx.toFixed(1)+'" y="'+(y-3).toFixed(1)+'" text-anchor="middle">'+esc(fmtV(p.v))+'</text>';
+        }
+      } else {
+        s+='<rect class="tb0" x="'+(cx-bw/2).toFixed(1)+'" y="'+(padT+ih-6)+'" width="'+bw.toFixed(1)+'" height="6" rx="2"><title>'+esc(p.k+'  无采样数据')+'</title></rect>';
+      }
+      if(i%stepLbl===0){
+        s+='<text class="ax" x="'+cx.toFixed(1)+'" y="'+(padT+ih+15)+'" text-anchor="middle">'+esc(p.k)+'</text>';
+      }
+    }
+    s+='</svg>';
+    box.innerHTML=s;
+
+    var tip=$('trend-tip');
+    if(tip && d){
+      var t='';
+      if(d.gaps>0) t+='有 '+d.gaps+' 个时间段没有采样（插件没在运行或刚装上），显示为灰点。';
+      if(d.unit==='hour') t+='小时用电由累计读数差推算，采满一天后曲线才完整。';
+      if(!t) t='按小时统计用电量，由插件定时采样累计读数自己推算。';
+      tip.textContent=t;
+    }
+  }
+  function loadTrend(){
+    var box=$('trend-box');
+    if(box && !S.trendData) box.innerHTML='<div class="empty">加载中…</div>';
+    return apiGet('trend',{range:S.trend}).then(unwrap).then(function(d){
+      renderTrend(d);
+    }).catch(function(e){
+      if(box) box.innerHTML='<div class="empty">读取趋势失败：'+esc(e.message||e)+'</div>';
+    });
+  }
+  function bindTrend(){
+    var box=$('card-trend'); if(!box) return;
+    box.addEventListener('click',function(ev){
+      var b=ev.target && ev.target.closest ? ev.target.closest('[data-tr]') : null;
+      if(!b) return;
+      var all=box.querySelectorAll('[data-tr]');
+      for(var i=0;i<all.length;i++) all[i].classList.toggle('on', all[i]===b);
+      S.trend=b.getAttribute('data-tr');
+      S.trendData=null;
+      loadTrend();
+    });
+  }
   function bindStatic(){
     $('q-start-box').innerHTML=dtBox('q-start','');
     $('q-end-box').innerHTML=dtBox('q-end','');
@@ -1410,6 +1517,8 @@
     };
     bindFold();
     bindRunlog();
+    bindTrend();
+    loadTrend();
   }
 
   var _tries=0, _started=false;

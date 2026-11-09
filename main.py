@@ -70,7 +70,7 @@ class _RingHandler(logging.Handler):
         except Exception:  # noqa: BLE001
             pass
 
-PLUGIN_VERSION = "3.1.2"
+PLUGIN_VERSION = "3.1.3"
 DISPLAY_NAME = "无锡科技职业技术学院电费查询"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -195,6 +195,9 @@ class ElecBillPlugin(Star):
         self._log_buf = deque(maxlen=600)
         self._notice_file = os.path.join(self.data_dir, "notices.json")
         self._notice_buf = deque(maxlen=200)
+        self._sample_file = os.path.join(self.data_dir, "samples.json")
+        self._samples = []
+        self._sample_load()
         self._notice_load()
         self._attach_log_ring()
         try:
@@ -219,6 +222,7 @@ class ElecBillPlugin(Star):
             ("/targets", self.api_targets, ["GET"]),
             ("/preview", self.api_preview, ["POST"]),
             ("/runlog", self.api_runlog, ["GET"]),
+            ("/trend", self.api_trend, ["GET"]),
         ]
         for route, fn, methods in table:
             try:
@@ -456,6 +460,7 @@ class ElecBillPlugin(Star):
         rec.setdefault("first_used", used)
         rec.setdefault("first_buy", buy)
         rec["used"] = used
+        self._sample_touch(used)
         rec["buy"] = buy
         h[d] = rec
         for k in sorted(h.keys())[:-120]:
@@ -761,6 +766,153 @@ class ElecBillPlugin(Star):
             os.replace(tmp, self._notice_file)
         except Exception as e:  # noqa: BLE001
             logger.warning("[电费] 保存通知记录失败: %s", e)
+
+    # ------------------------------------------------------------ 趋势采样
+    def _sample_load(self):
+        """载入历史采样点 [(datetime, 累计用电量)]，坏数据跳过不影响启动。"""
+        try:
+            if not os.path.isfile(self._sample_file):
+                return
+            with open(self._sample_file, "r", encoding="utf-8") as f:
+                arr = json.load(f)
+            out = []
+            if isinstance(arr, list):
+                for x in arr:
+                    try:
+                        out.append((datetime.strptime(str(x["t"]), "%Y-%m-%d %H:%M:%S"),
+                                    float(x["u"])))
+                    except Exception:  # noqa: BLE001
+                        continue
+            out.sort(key=lambda z: z[0])
+            self._samples = out
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[电费] 读取趋势采样失败（忽略，继续运行）: %s", e)
+            self._samples = []
+
+    def _sample_save(self):
+        try:
+            arr = [{"t": t.strftime("%Y-%m-%d %H:%M:%S"), "u": round(u, 3)}
+                   for t, u in self._samples]
+            tmp = self._sample_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(arr, f, ensure_ascii=False)
+            os.replace(tmp, self._sample_file)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[电费] 保存趋势采样失败（忽略，继续运行）: %s", e)
+
+    def _sample_touch(self, used):
+        """记一次累计用电量，供趋势图按小时/按天还原。
+
+        节流 4 分钟一次：24 小时约 360 个点，画小时图足够精确，
+        也不会把 samples.json 撑大（保留 35 天）。
+        用平台 elecUsed（累计用电量）而不是余额，充值不会让它跳变，
+        相邻两点相减就是这段区间的实际用电。
+        """
+        now = datetime.now()
+        if self._samples and (now - self._samples[-1][0]).total_seconds() < 240:
+            return
+        self._samples.append((now, round(float(used), 3)))
+        cut = now - timedelta(days=35)
+        self._samples = [x for x in self._samples if x[0] >= cut][-30000:]
+        self._sample_save()
+
+    def _usage_between(self, start, end):
+        """把相邻采样的累计用量差按时间比例分摊到 [start, end] 内的重叠部分。
+
+        跨区间边界的采样对按重叠时长折算，所以既不漏算也不重复。
+        返回 (用电量, 这段时间是否有可用采样)。
+        """
+        sm = self._samples
+        if len(sm) < 2:
+            return 0.0, False
+        total = 0.0
+        hit = False
+        for (t1, u1), (t2, u2) in zip(sm, sm[1:]):
+            if t2 <= start or t1 >= end:
+                continue
+            du = u2 - u1
+            if du <= 0:            # 换表或回绕，这一段不可信，跳过
+                continue
+            span = (t2 - t1).total_seconds()
+            if span <= 0:
+                continue
+            lo = t1 if t1 > start else start
+            hi = t2 if t2 < end else end
+            if hi <= lo:
+                continue
+            total += du * ((hi - lo).total_seconds() / span)
+            hit = True
+        return total, hit
+
+    def _trend_24h(self):
+        """过去 24 小时，每小时一个桶。"""
+        top = datetime.now().replace(minute=0, second=0, microsecond=0)
+        pts = []
+        for i in range(23, -1, -1):
+            s = top - timedelta(hours=i)
+            v, hit = self._usage_between(s, s + timedelta(hours=1))
+            pts.append({"k": s.strftime("%H:00"), "t": s.strftime("%Y-%m-%d %H:00"),
+                        "v": round(v, 3) if hit else None})
+        return pts
+
+    def _trend_days(self, h, n):
+        """近 n 天，每天一个桶。优先用 hist.json 的当日首末读数差。"""
+        today = date.today()
+        pts = []
+        for i in range(n - 1, -1, -1):
+            d = today - timedelta(days=i)
+            key = d.isoformat()
+            rec = h.get(key) or {}
+            v = None
+            try:
+                if rec.get("first_used") is not None and rec.get("used") is not None:
+                    dv = float(rec["used"]) - float(rec["first_used"])
+                    if dv >= 0:
+                        v = dv
+            except Exception:  # noqa: BLE001
+                v = None
+            if v is None:
+                s = datetime.combine(d, datetime.min.time())
+                v2, hit = self._usage_between(s, s + timedelta(days=1))
+                v = v2 if hit else None
+            pts.append({"k": d.strftime("%m-%d"), "t": key,
+                        "v": round(v, 3) if v is not None else None})
+        return pts
+
+    def _trend_sync(self, rng):
+        h = self._hist()
+        if rng in ("7d", "30d"):
+            n = 7 if rng == "7d" else 30
+            pts, unit = self._trend_days(h, n), "day"
+        else:
+            rng, pts, unit = "24h", self._trend_24h(), "hour"
+        vals = [p["v"] for p in pts if p["v"] is not None]
+        return {
+            "range": rng, "unit": unit, "points": pts,
+            "total": round(sum(vals), 3),
+            "avg": round(sum(vals) / len(vals), 3) if vals else 0,
+            "peak": round(max(vals), 3) if vals else 0,
+            "ready": bool(vals),
+            "gaps": len(pts) - len(vals),
+            "sampleFrom": self._samples[0][0].strftime("%Y-%m-%d %H:%M") if self._samples else "",
+            "sampleCount": len(self._samples),
+        }
+
+    async def api_trend(self):
+        """用电趋势：24h 按小时，7d/30d 按天。"""
+        try:
+            q = getattr(request, "query", None)
+            if q is None:
+                q = getattr(request, "args", None)
+            rng = ""
+            try:
+                rng = str((q.get("range") if q is not None else "") or "")
+            except Exception:  # noqa: BLE001
+                rng = ""
+            return self._ok(await asyncio.to_thread(self._trend_sync, rng))
+        except Exception as e:  # noqa: BLE001
+            logger.error("[电费] trend 失败: %s", e)
+            return self._err("读取趋势失败：%s" % e)
 
     async def api_runlog(self):
         """控制台「运行日志」：本进程日志 + 已发送通知。"""
